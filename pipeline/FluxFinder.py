@@ -48,7 +48,7 @@ class FluxFinder:
     avg_fluxes = []
     
     
-    def __init__(self, directory, image_names, has_sets, n_sets, set_size):
+    def __init__(self, directory, image_names, has_sets, set_size=0, n_sets=0):
         self.directory = directory
         self.image_names = image_names
         self.n_sets = n_sets

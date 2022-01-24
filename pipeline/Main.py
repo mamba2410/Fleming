@@ -38,7 +38,7 @@ sf.get_all_shifts()
 Utilities.print_job("finding shifts")
 # 
 # =============================================================================
-ff = FluxFinder.FluxFinder(Constants.folder, Constants.file_name, True, 9, 50)
+ff = FluxFinder.FluxFinder(Constants.folder, Constants.file_name, True, Constants.set_size, Constants.n_sets)
 ff.find_all_fluxes()
 ff.make_light_curves()
 
@@ -51,7 +51,7 @@ r = None
 c = None
 sf = None
 
-da = DataAnalyser.DataAnalyser(Constants.folder, Constants.file_name, True, 9, 50)
+da = DataAnalyser.DataAnalyser(Constants.folder, Constants.file_name, True, Constants.set_size, Constants.n_sets)
 
 da.get_means_and_stds(False)
 da.get_variables(False)
