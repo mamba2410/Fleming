@@ -74,7 +74,7 @@ class FluxFinder:
         #iterate over each image
         for set in range(1, self.n_sets+1):
             for i in range(1, self.set_size+1):
-                print(str(i))
+                print("Set {}; image {}".format(set, i))
                 self.find_fluxes(i, set)
                 
                
