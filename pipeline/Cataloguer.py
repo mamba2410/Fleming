@@ -3,6 +3,7 @@ from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
 from astropy.wcs import WCS
 import os
+import os.path
 import Constants
 import Utilities
 from astropy.table import Table
@@ -16,10 +17,10 @@ from astroquery.astrometry_net import AstrometryNet
 class Cataloguer:
     
     #directory containing raw images
-    filesdir = None 
+    workspace_dir = None 
     
-    #image name regex
-    image_names = None
+    #image name prefix
+    image_prefix = None
     
     #number of images within each set
     set_size = None
@@ -29,6 +30,9 @@ class Cataloguer:
     
     #number of sets 
     n_sets = None
+
+    # Path to the catalogue
+    catalogue_path = None
     
     #number of sources
     n_sources = 0
@@ -49,30 +53,23 @@ class Cataloguer:
     
     wcs = None
     
-    def __init__(self, dir, image_names, has_sets, set_size, n_sets):
+    def __init__(self, workspace_dir, image_prefix, has_sets, set_size=0, n_sets=0):
     
-        self.filesdir = dir
-        self.image_names = image_names
+        self.workspace_dir = workspace_dir
+        self.image_prefix = image_prefix
         self.has_sets = has_sets
         self.n_sets = n_sets
         self.set_size = set_size
         
+
+
     #generate a catalogue of all the stars in the first image, and a list of 
     #the times at which each image was taken 
-    def catalogue(self):
+    def catalogue(self, image_path):
         
-        #build filepath for first image in the entire dataset
-        imagedir = self.filesdir + Constants.working_directory + Constants.image_directory 
-    
-        #build file name with the appropriate format given whether the 
-        #data is stored in sets
-        if not self.has_sets:
-            file = Constants.reduced_prefix + self.image_names + "0001" + Constants.fits_extension 
-        else:
-            file = Constants.reduced_prefix + self.image_names + "_1_001" + Constants.fits_extension
         
         #read in first image data
-        image_data = fits.getdata(imagedir + file, ext=0)
+        image_data = fits.getdata(image_path, ext=0)
         
         
         #build a catalogue of all stars in the image
@@ -81,41 +78,53 @@ class Cataloguer:
         self.remove_stars(sources, image_data)
         
         self.n_sources = len(sources['id'])
-        Utilities.make_reg_file(self.filesdir, self.image_names, sources)
+        Utilities.make_reg_file(
+                os.path.join(self.workspace_dir), self.image_prefix, sources)
         
-        print("Catalogued " + str(self.n_sources) + " objects")
+        print("Catalogues {} objects".format(self.n_sources))
         
         #add the RA and DEC for each star to the catalogue
-        self.convert_to_ra_and_dec(imagedir+file, sources)
+        self.convert_to_ra_and_dec(image_path, sources)
     
         #build catalogue file path
-        filepath = self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension
+        fname = "{}{}{}".format(
+                Constants.catalogue_prefix, self.image_prefix, Constants.standard_file_extension)
+        self.catalogue_path = os.path.join(self.workspace_dir, fname)
         
         #write the catalogue to the catalogue file
-        sources.write(filepath, format = Constants.table_format, overwrite=True)
+        sources.write(self.catalogue_path, format = Constants.table_format, overwrite=True)
         
         
             
         #build path of file to store the time at which each image was taken
-        times = self.filesdir + "workspace/" + Constants.time_file
+        times = os.path.join(self.workspace_dir, Constants.time_fname)
         
         #if file already exists, delete its contents
         if(os.path.exists(times)):
             open(times, "w").close()
+
+        if self.has_sets:
+            format_str = "{}{}_{}_{}{}".format(
+                    Constants.reduced_prefix, self.image_prefix, "{:1}", "{:03}", Constants.fits_extension)
+        else:
+            format_str = "{}{}_{}{}".format(
+                    Constants.reduced_prefix, self.image_prefix, "{:04}", Constants.fits_extension)
     
         #loop through all images within each set 
-        for set in range(1, self.n_sets + 1):
+        for s in range(1, self.n_sets + 1):
             for i in range(1, self.set_size + 1):
                 
                 #build image filepath 
                 if not self.has_sets:
-                    file = imagedir + Constants.reduced_prefix + self.image_names + "000" + str(i) + ".fits"
+                    file = os.path.join(self.workspace_dir, Constants.image_subdir, format_str.format(i))
                 else:
-                    file = imagedir + Constants.reduced_prefix + self.image_names + "_" + str(set) + "_" + Utilities.format_index(i) + Constants.fits_extension
+                    file = os.path.join(self.workspace_dir, Constants.image_subdir, format_str.format(s, i))
                 
                 #store the time which the current image was taken
                 self.add_times(times, fits.getheader(file))
     
+
+
     def remove_stars(self, sources, image_data):
         
         to_remove = []
@@ -151,58 +160,51 @@ class Cataloguer:
             sources['DEC'][x] = dec
     
     #add the time of the specified image file being taken to the times file
-    def add_times(self, time_file, image_header):
+    def add_times(self, time_file_path, image_header):
         
         #open time file in appending mode 
-        f = open(time_file, "a+")
-        
-        #write date of observation to file 
-        f.write(str(image_header['DATE-OBS']) + "\r\n")
+        with open(time_file_path, "a+") as f:
+            #write date of observation to file 
+            f.write("{}{}".format(image_header['DATE-OBS'], Constants.line_ending))
         
     
     
     #plot the means and standard deviations of all light curves generated
-    def get_means_and_stds(self, adjusted):
+    def get_means_and_stds(self, adjusted=False):
         
         #build path of the directory in which the light curves are stored
         self.means = []
         self.stds = []
         
-        cat = Table.read(self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension, format=Constants.table_format)
+        cat = Table.read(self.catalogues_path, format=Constants.table_format)
         
         
-        if not adjusted:
-            light_curve_dir = self.filesdir + Constants.working_directory + Constants.light_curve_directory
+        if adjusted:
+            light_curve_dir = os.path.join(self.workspace_dir, Constants.adjusted_curves_directory)
         else:
-            light_curve_dir = self.filesdir + Constants.working_directory + Constants.adjusted_curves_directory
+            light_curve_dir = os.path.join(self.workspace_dir, Constants.light_curve_subdir)
     
         #for each file in the light curve directory 
         for file in os.listdir(light_curve_dir):
-            
-            if file[:len(self.image_names)] == self.image_names:
-                #print(file)
+            if file[:len(self.image_prefix)] == self.image_prefix:
+
                 #read light curve data from file
-                t = Table.read(light_curve_dir + file, format = Constants.table_format)
+                t = Table.read(os.path.join(light_curve_dir, file), format = Constants.table_format)
                                 
                 #only plot data point if at least 5 non-zero counts are recorded
                 if len(t['counts']) > 100:
-                    
-                    
                     mean = Utilities.mean(t['counts'])
-                    
                     std = Utilities.standard_deviation(t['counts'])
-                    
                     value = std/mean
                     
-                    id = file.split("id")[1].split(".")[0]
-    
+                    image_id = file.split(Constants.identifier)[1].split(".")[0]
                     
-                    
+                    # ??? Magic numbers
                     if value > 0 and value < 2 and mean > 0.02 and mean < 80:
                         self.stds.append(value)
                         self.means.append(mean)
                 
-                        self.id_map.append(str(id))
+                        self.id_map.append(str(image_id))
                 
                     #if Utilities.is_above_line(std, mean, 17, 0, 0.05) and mean > 50:
                     #if value < 0.01 and mean > 3:
@@ -213,8 +215,11 @@ class Cataloguer:
         #sort results by decreasing variability 
         Utilities.quicksort(a, True)
     
+
+
+
+    # TODO: Plot title
     def plot_means_and_stds(self):
-        
         plt.scatter(self.means, self.stds, marker = '.')
         plt.scatter(self.var_means, self.var_stds, marker = '.', color = 'red')
         plt.xlabel("mean")
@@ -225,6 +230,9 @@ class Cataloguer:
         plt.gca().set_ylim(bottom=0)
         plt.show()
     
+
+
+    # TODO:
     #finds which stars are variable by comparing their standard deviations
     #and means to those of the surrounding stars in the mean-std plot
     #I think a better method should be implemented
@@ -269,19 +277,23 @@ class Cataloguer:
         
         
             
-    #print plots of all variable stars in dataset             
-    def get_variables(self):
+## TODO: Remove?
+#    #print plots of all variable stars in dataset             
+#    def get_variables(self):
+#        
+#        t = 0
+#        
+#        ff = FluxFinder.FluxFinder("/Users/Thomas/Documents/Thomas_test/", "l198", True, 7, 50)
+#    
+#        for i in range(len(self.means)):
+#            if self.is_variable(i):
+#                t+= 1
+#                #print(self.id_map[i])
+#                ff.plot_light_curve(self.id_map[i], None, True)
         
-        t = 0
-        
-        ff = FluxFinder.FluxFinder("/Users/Thomas/Documents/Thomas_test/", "l198", True, 7, 50)
-    
-        for i in range(len(self.means)):
-            if self.is_variable(i):
-                t+= 1
-                #print(self.id_map[i])
-                ff.plot_light_curve(self.id_map[i], None, True)
-        
+
+
+    ## TODO: Magic numbers
     #find ids of stars with high brightness to produce average light curve.
     #the average light curve is subtracted from each printed light curve to 
     #reduce bias
@@ -294,7 +306,9 @@ class Cataloguer:
             #if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
             if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
        
-                light_curve_path = self.filesdir + Constants.working_directory + Constants.light_curve_directory + self.image_names + Constants.identifier + str(self.id_map[i]) + Constants.standard_file_extension
+                fname = "{}_{}{:04}{}".format(self.image_prefix, Constants.identifier,
+                        self.id_map[i], Constants.standard_file_extension)
+                light_curve_path = os.path.join(self.workspace_dir, Constants.light_curve_dir, )
     
                 t = Table.read(light_curve_path, format = Constants.table_format)
                 
@@ -304,8 +318,9 @@ class Cataloguer:
         return ids
         
         
+
+    # TODO: Docs
     def get_wcs_header(self, file):
-        
         ast = AstrometryNet()
         ast.TIMEOUT = 1200
         ast.api_key = Constants.api_key
@@ -326,6 +341,7 @@ class Cataloguer:
         return WCS(header=wcs)
         #return WCS()   
             
+
         
             #catalogue all sources that meet the thresholds in the image
 def find_stars(image_data, threshold):
@@ -339,7 +355,6 @@ def find_stars(image_data, threshold):
     
     #finds sources
     sources = daofind(image_data)
-    
 
         
     for col in sources.colnames:    
@@ -348,42 +363,4 @@ def find_stars(image_data, threshold):
     return sources
 
                     
-                    
-                    
-                    
-                    
-                      
-                            
-                            
-                
-                            
-                    
-                            
-            
-        
-                    
-                        
-            
-            
-            
-        
-        
-        
 
-        
-        
-            
-            
-        
-        
-        
-
-        
-            
-        
-        
-        
-        
-        
-    
-    
