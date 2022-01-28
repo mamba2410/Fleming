@@ -544,18 +544,18 @@ class FluxFinder:
         minimum = min(fluxes)
         maximum = max(fluxes)
     
-        _ = plt.figure(figsize = (12, 8))
-        _ = plt.scatter(times, fluxes, s=5, marker = 'x');
-        _ = plt.xlabel("time (s)")
-        _ = plt.ylabel("counts/mean")
-        _ = plt.ylim(0.9 * minimum, maximum * 1.1)
+        plt.figure(figsize = (12, 8))
+        plt.scatter(times, fluxes, s=5, marker = 'x');
+        plt.xlabel("time (s)")
+        plt.ylabel("counts/mean")
+        plt.ylim(0.9 * minimum, maximum * 1.1)
         
         if id == None:
             id = 'avg'
-     
             
-        _ = plt.savefig(Constants.folder + Constants.working_directory + Constants.output_directory + self.image_names + "_id_" + str(id) + "_LC")
+        plt.savefig(Constants.folder + Constants.working_directory + Constants.output_directory + self.image_names + "_id_" + str(id) + "_LC")
 
+        plt.close()
         
     
     #makes an average light curve with the brightest stars to subtract noise
@@ -678,20 +678,4 @@ class FluxFinder:
             
         return image[ly:ry, lx:rx] # note your x,y coords need to be an int
 
-        
-        
-        
-        
-        
-        
-        
-        
-            
-            
-        
-            
-    
-    
-    
-    
-            
+
