@@ -1,7 +1,7 @@
 
 ## General directories
 working_directory = "workspace/"        # Where to store everything
-image_directory = "reduced_images/"     # Where the JGT images are
+image_directory = "reduced_images/jgt/0121/"     # Where the JGT images are
 fits_extension = ".fit"
 #reduced_prefix = "r_"
 reduced_prefix = ""                     # Not used
@@ -43,5 +43,9 @@ set_size = 50               # Images per set
 n_sets = 7                  # Number of sets total
 
 ## Per-user things
-folder = "C:\\Users\\callu\\uni-git\\masters-project\\fleming\\pipeline\\"  # Pipeline root
-api_key = "tbdnkqfbeefqjvzw"                                                # Astrometry.net API key
+#folder = "C:\\Users\\callu\\uni-git\\masters-project\\fleming\\pipeline\\"  # Pipeline root
+folder = "/home/callum/repos/uni-git/masters-project/fleming/pipeline/"
+api_key = ""                                                # Astrometry.net API key
+with open(folder+"astrometry_api_key.txt") as f:
+    api_key = f.read().replace("\n", "")
+api_key = "rozofdslppcdpqku"

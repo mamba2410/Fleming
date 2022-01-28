@@ -114,7 +114,7 @@ class ShiftFinder:
 
             for i in range(1, self.set_size+1):    
 
-                print(i)
+                #print(i)
                 print("Finding shifts in image " + str((set-1)*self.set_size + i))
 
                 #build image file path

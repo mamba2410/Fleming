@@ -439,7 +439,8 @@ class FluxFinder:
                         light_curves.append(Table(names = ('time','counts')))
                         
                     #get time matching the image
-                    date_and_time = times[(set-1) * self.set_size * 2 + (2*i-2)]
+                    #date_and_time = times[(set-1) * self.set_size * 2 + (2*i-2)]
+                    date_and_time = times[(set-1)*self.set_size + i-1]
                     
                     #just interested in time part of date and time for now
                     time = date_and_time.split("T")[1]
