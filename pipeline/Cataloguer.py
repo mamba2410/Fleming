@@ -115,10 +115,10 @@ class Cataloguer:
             for i in range(1, self.set_size + 1):
                 
                 #build image filepath 
-                if not self.has_sets:
-                    file = os.path.join(self.workspace_dir, Constants.image_subdir, format_str.format(i))
-                else:
+                if self.has_sets:
                     file = os.path.join(self.workspace_dir, Constants.image_subdir, format_str.format(s, i))
+                else:
+                    file = os.path.join(self.workspace_dir, Constants.image_subdir, format_str.format(i))
                 
                 #store the time which the current image was taken
                 self.add_times(times, fits.getheader(file))

@@ -9,10 +9,10 @@ import numpy as np
 class ShiftFinder:
     
     #directory containing raw images
-    directory = None
+    workspace_dir = None
     
     #image name regex
-    image_names = None
+    image_prefix = None
     
     #are the images stored in sets?
     has_sets = None
@@ -23,18 +23,24 @@ class ShiftFinder:
     #number of images in each set
     set_size = None
     
-    def __init__(self, dir, names, has_sets, set_size, n_sets):
-        self.directory = dir
-        self.image_names = names
+    def __init__(self, workspace_dir, image_prefix, has_sets, set_size, n_sets):
+        self.workspace_dir = workspace_dir
+        self.image_prefix = image_prefix
         self.has_sets = has_sets
         self.n_sets = n_sets
         self.set_size = set_size
+
+
     
+    # TODO: Quicksort, magic numbers
     #finds the coordinates of the brightest star in the image
     def get_reference_coordinates(self):
         
         #reads in catalogue
-        t = Table.read(self.directory + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension, format=Constants.table_format)
+        table_fname = "{}{}{}".format(
+                Constants.catalogue_prefix, self.image_prefix, Constants.standard_file_extension)
+        table_path = os.path.join(self.workspace_dir, table_fname)
+        t = Table.read(table_path, format=Constants.table_format)
 
         xs = t["xcentroid"]
         ys = t["ycentroid"]
@@ -44,6 +50,7 @@ class ShiftFinder:
         
         Utilities.quicksort([fluxes, xs, ys], True)
 
+        # Magic numbers
         i = int(len(fluxes)*0.8)
         n = 10
         
@@ -66,10 +73,12 @@ class ShiftFinder:
         
         return x, y
     
-    def find_shift(self, previous_x, previous_y, image_path):
+
+    ## TODO: Fit warnings are probably in here
+    def find_shift(self, previous_x, previous_y, image_path, size=10):
 
         # choose how big a box to draw around the star
-        size = 10  # 10 will make a 20x20 pixel box
+        #size = 10  # 10 will make a 20x20 pixel box
         
         # open the next image and load it as an array
         image = fits.open(image_path)
@@ -90,15 +99,17 @@ class ShiftFinder:
         return x_shift, y_shift
     
         
+
+
+    ## TODO: Fix fit warnings
     def get_all_shifts(self):
         
-        
         #build filepath to file in which shifts will be stored       
-        shift_file = self.directory + Constants.working_directory + Constants.shift_file
+        shift_path = os.path.join(Constants.workspace_dir, Constants.shift_fname)
         
         #empty shift file if it exists
-        if(os.path.exists(shift_file)):
-            open(shift_file, "w").close()
+        if(os.path.exists(shift_path)):
+            open(shift_path, "w").close()
         
         x_shifts = []
         y_shifts = []
@@ -110,22 +121,27 @@ class ShiftFinder:
         
         
         #iterate through each image in each set
-        for set in range(1, self.n_sets + 1):
-
+        for s in range(1, self.n_sets + 1):
             for i in range(1, self.set_size+1):    
 
-                #print(i)
-                print("Finding shifts in image " + str((set-1)*self.set_size + i))
+                print("Finding shifts in image: set {:1}; image {:03}".format(s, i))
 
+                ## TODO: Make this a utils function
                 #build image file path
-                image = self.directory + Constants.working_directory + Constants.image_directory + Constants.reduced_prefix + self.image_names
-                
-                if not self.has_sets:            
-                    image += "000" + str(i)
+                if self.has_sets:
+                    format_str = "{}{}_{}_{}{}".format(Constants.reduced_prefix, 
+                            self.image_prefix, "{:1}", "{:03}", Constants.fits_extension)
                 else:
-                    image += "_" + str(set) + "_" + Utilities.format_index(i)
-                
-                image += Constants.fits_extension                    
+                    format_str = "{}{}_{}{}".format(Constants.reduced_prefix, 
+                            self.image_prefix, "{:04}", Constants.fits_extension)
+
+                if self.has_sets:
+                    image_path = os.path.join(self.workspace_dir, 
+                            Constants.image_subdir, format_str.format(s, i))
+                else:
+                    image_path = os.path.join(self.workspace_dir, 
+                            Constants.image_subdir, format_str.format(i))
+
                 
                 avg_x = []
                 avg_y = []
@@ -133,14 +149,14 @@ class ShiftFinder:
                 for k in range(len(xs)):
                     #find shift between the x and y of the reference star in the 
                     #previous image and the current image
-                    x_shift, y_shift = self.find_shift(xs[k], ys[k], image)
+                    x_shift, y_shift = self.find_shift(xs[k], ys[k], image_path)
                     
                     #append the total shift so far to the arrays containing
                     #the shifts
                     avg_x.append(x_shift)
                     avg_y.append(y_shift)
                 
-                if set == 1 and i == 1:
+                if s == 1 and i == 1:
                     prev_x_shift = 0
                     prev_y_shift = 0
                 else:
@@ -166,30 +182,30 @@ class ShiftFinder:
         table = Table([x_shifts, y_shifts], names = ('xshifts','yshifts'))
         
         #export shifts as table 
-        table.write(shift_file, format = Constants.table_format, overwrite=True)
+        table.write(shift_path, format = Constants.table_format, overwrite=True)
     
-    
-    #I believe this is redundant
-    def find_shift_between_all_catalogues(self, image_size):  
-        
-        previous_cat = Table.read(self.directory + Constants.working_directory + Constants.catalogue_prefix + self.image_names + "_1" + Constants.standard_file_extension, format = Constants.table_format)
-        x_shifts = []
-        y_shifts = []
-        
-        for i in range(2, self.n_sets+1):
-            cat = Table.read(self.directory + Constants.working_directory + Constants.catalogue_prefix + self.image_names + "_" + str(i) + Constants.standard_file_extension, format = Constants.table_format)
-            x_shift, y_shift = self.find_shift_between_catalogues(previous_cat, cat, image_size)
-            
-            x_shifts.append(x_shift)
-            y_shifts.append(y_shift)
-            
-            previous_cat = cat
-            
-        shift_file = self.directory + Constants.working_directory + Constants.catalogue_shift_file
-
-        table = Table([x_shifts, y_shifts], names = ('xshifts','yshifts'))
-        
-        table.write(shift_file, format = Constants.table_format, overwrite=True)
+## TODO: Remove
+#    #I believe this is redundant
+#    def find_shift_between_all_catalogues(self, image_size):  
+#        
+#        previous_cat = Table.read(self.directory + Constants.working_directory + Constants.catalogue_prefix + self.image_names + "_1" + Constants.standard_file_extension, format = Constants.table_format)
+#        x_shifts = []
+#        y_shifts = []
+#        
+#        for i in range(2, self.n_sets+1):
+#            cat = Table.read(self.directory + Constants.working_directory + Constants.catalogue_prefix + self.image_names + "_" + str(i) + Constants.standard_file_extension, format = Constants.table_format)
+#            x_shift, y_shift = self.find_shift_between_catalogues(previous_cat, cat, image_size)
+#            
+#            x_shifts.append(x_shift)
+#            y_shifts.append(y_shift)
+#            
+#            previous_cat = cat
+#            
+#        shift_file = self.directory + Constants.working_directory + Constants.catalogue_shift_file
+#
+#        table = Table([x_shifts, y_shifts], names = ('xshifts','yshifts'))
+#        
+#        table.write(shift_file, format = Constants.table_format, overwrite=True)
             
 # =============================================================================
 # #I believe this is redundant 
@@ -253,4 +269,4 @@ class ShiftFinder:
         
         
     
-    
+
