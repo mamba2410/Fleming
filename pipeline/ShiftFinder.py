@@ -101,9 +101,9 @@ class ShiftFinder:
         for s in range(1, self.config.n_sets+1):
             for i in range(1, self.config.set_size+1):    
 
-                print("[ShiftFinder] Finding shifts in image: set {:1}; image {:03}".format(s, i))
+                print("[ShiftFinder] Finding shifts in image: set {:1}; image {:03}...".format(s, i))
 
-                if self.has_sets:
+                if self.config.has_sets:
                     image_path = os.path.join(self.config.image_dir,
                             self.config.image_format_str.format(s, i))
                 else:
@@ -141,7 +141,7 @@ class ShiftFinder:
                 
                 x_shifts.append(med_x+prev_x_shift)
                 y_shifts.append(med_y+prev_y_shift)
-                print(x_shifts[j], y_shifts[j])
+                print("[ShiftFinder] ...Shifts: {},{}".format(x_shifts[j], y_shifts[j]))
 
                 j+= 1
                 
@@ -150,7 +150,7 @@ class ShiftFinder:
         table = Table([x_shifts, y_shifts], names = ('xshifts','yshifts'))
         
         #export shifts as table 
-        table.write(shift_path, format=self.config.table_format, overwrite=True)
+        table.write(self.config.shift_path, format=self.config.table_format, overwrite=True)
     
 ## TODO: Remove
 #    #I believe this is redundant
