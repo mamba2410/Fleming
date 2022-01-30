@@ -15,116 +15,75 @@ from astroquery.astrometry_net import AstrometryNet
 #add xy dimensions of image as global variable
 
 class Cataloguer:
-    
-    #directory containing raw images
-    workspace_dir = None 
-    
-    #image name prefix
-    image_prefix = None
-    
-    #number of images within each set
-    set_size = None
-    
-    #are images stored in sets?
-    has_sets = None
-    
-    #number of sets 
-    n_sets = None
 
-    # Path to the catalogue
-    catalogue_path = None
+    config = None           # Config object
     
-    #number of sources
-    n_sources = 0
-    
+    n_sources = 0           # Number of sources
+
     means = []
-    
     stds = []
-    
     var_means = []
-    
     var_stds = []
-    
-    id_map = []
-    
     mean_bins = []
-    
     avgs = []
     
+    id_map = []
     wcs = None
-    
-    def __init__(self, workspace_dir, image_prefix, has_sets, set_size=0, n_sets=0):
-    
-        self.workspace_dir = workspace_dir
-        self.image_prefix = image_prefix
-        self.has_sets = has_sets
-        self.n_sets = n_sets
-        self.set_size = set_size
-        
 
 
-    #generate a catalogue of all the stars in the first image, and a list of 
+    
+    ## Constructor
+    def __init__(self, config):
+        self.config = config
+
+
+    #generate a catalogue of all the stars in the given image, and a list of 
     #the times at which each image was taken 
     def catalogue(self, image_path):
-        
-        
+
         #read in first image data
         image_data = fits.getdata(image_path, ext=0)
         
-        
+        ## TODO: Magic number
         #build a catalogue of all stars in the image
         sources = find_stars(image_data, 5)
-        
         self.remove_stars(sources, image_data)
-        
         self.n_sources = len(sources['id'])
+
+
+        ## ??
         Utilities.make_reg_file(
                 os.path.join(self.workspace_dir), self.image_prefix, sources)
         
-        print("Catalogues {} objects".format(self.n_sources))
+        print("[Cataloguer] Catalogued {} objects".format(self.n_sources))
         
         #add the RA and DEC for each star to the catalogue
         self.convert_to_ra_and_dec(image_path, sources)
-    
-        #build catalogue file path
-        fname = "{}{}{}".format(
-                Constants.catalogue_prefix, self.image_prefix, Constants.standard_file_extension)
-        self.catalogue_path = os.path.join(self.workspace_dir, fname)
         
         #write the catalogue to the catalogue file
-        sources.write(self.catalogue_path, format = Constants.table_format, overwrite=True)
+        sources.write(self.config.catalogue_path, format=config.table_format, overwrite=True)
         
-        
-            
-        #build path of file to store the time at which each image was taken
-        times = os.path.join(self.workspace_dir, Constants.time_fname)
-        
-        #if file already exists, delete its contents
-        if(os.path.exists(times)):
-            open(times, "w").close()
+        ## Clear time tile
+        if(os.path.exists(self.config.time_path)):
+            open(self.config.time_path, "w").close()
 
-        if self.has_sets:
-            format_str = "{}{}_{}_{}{}".format(
-                    Constants.reduced_prefix, self.image_prefix, "{:1}", "{:03}", Constants.fits_extension)
-        else:
-            format_str = "{}{}_{}{}".format(
-                    Constants.reduced_prefix, self.image_prefix, "{:04}", Constants.fits_extension)
     
         #loop through all images within each set 
-        for s in range(1, self.n_sets + 1):
-            for i in range(1, self.set_size + 1):
+        for s in range(1, self.config.n_sets + 1):
+            for i in range(1, self.config.set_size + 1):
                 
                 #build image filepath 
-                if self.has_sets:
-                    file = os.path.join(self.workspace_dir, Constants.image_subdir, format_str.format(s, i))
+                if self.config.has_sets:
+                    image_file = os.path.join(self.config.workspace_dir, self.config.format_str.format(s, i))
                 else:
-                    file = os.path.join(self.workspace_dir, Constants.image_subdir, format_str.format(i))
+                    image_file = os.path.join(self.config.workspace_dir, self.config.format_str.format(i))
                 
                 #store the time which the current image was taken
-                self.add_times(times, fits.getheader(file))
+                self.add_times(self.config.time_path, fits.getheader(image_file))
     
 
 
+    ## 
     def remove_stars(self, sources, image_data):
         
         to_remove = []
@@ -138,34 +97,38 @@ class Cataloguer:
             sources.remove_row(to_remove[i] - i)
     
             
-        print("Dumped " + str(len(to_remove)) + " objects")
+        print("[Cataloguer] removed {} objects".format(len(to_remove)))
         
+
+
+
     #investigate what this is doing 
-    
     #convert all of the source x and y positions to RA and DEC
-    def convert_to_ra_and_dec(self, file, sources):
+    def convert_to_ra_and_dec(self, image_file, sources=None):
         
         # find the wcs assosiated with the fits image using astropy and the header
-        self.wcs = self.get_wcs_header(file)
+        self.wcs = self.get_wcs_header(image_file)
         
-        return 
-        # make two new coloums of 0's
-        sources['RA'] = sources['xcentroid'] * 0
-        sources['DEC'] = sources['xcentroid'] * 0
+        ## make two new coloums of 0's
+        #sources['RA'] = sources['xcentroid'] * 0
+        #sources['DEC'] = sources['xcentroid'] * 0
     
-        # replace the 0's with ra and dec
-        for x in range(0,len(sources)):
-            ra, dec = self.wcs.all_pix2world(sources['xcentroid'][x], sources['ycentroid'][x], 0) 
-            sources['RA'][x] = ra
-            sources['DEC'][x] = dec
+        ## replace the 0's with ra and dec
+        #for x in range(0,len(sources)):
+        #    ra, dec = self.wcs.all_pix2world(sources['xcentroid'][x], sources['ycentroid'][x], 0) 
+        #    sources['RA'][x] = ra
+        #    sources['DEC'][x] = dec
     
+
+
+
     #add the time of the specified image file being taken to the times file
-    def add_times(self, time_file_path, image_header):
+    def add_times(self, image_header):
         
         #open time file in appending mode 
-        with open(time_file_path, "a+") as f:
+        with open(self.config.time_path, "a+") as f:
             #write date of observation to file 
-            f.write("{}{}".format(image_header['DATE-OBS'], Constants.line_ending))
+            f.write("{}{}".format(image_header['DATE-OBS'], self.config.line_ending))
         
     
     
@@ -176,28 +139,32 @@ class Cataloguer:
         self.means = []
         self.stds = []
         
-        cat = Table.read(self.catalogues_path, format=Constants.table_format)
+        cat = Table.read(self.config.catalogue_path, format=self.config.table_format)
         
         
         if adjusted:
-            light_curve_dir = os.path.join(self.workspace_dir, Constants.adjusted_curves_directory)
+            light_curve_dir = self.config.adjusted_curve_dir
+            print("[Cataloguer] Using adjusted light curves")
         else:
-            light_curve_dir = os.path.join(self.workspace_dir, Constants.light_curve_subdir)
+            light_curve_dir = self.config.light_curve_dir
+            print("[Cataloguer] Using non-adjusted light curves")
     
-        #for each file in the light curve directory 
+        #for each image file in the light curve directory 
         for file in os.listdir(light_curve_dir):
-            if file[:len(self.image_prefix)] == self.image_prefix:
+            if file[:len(self.config.image_prefix)] == self.config.image_prefix:
 
                 #read light curve data from file
-                t = Table.read(os.path.join(light_curve_dir, file), format = Constants.table_format)
+                t = Table.read(os.path.join(light_curve_dir, file), format=self.config.table_format)
+
                                 
+                ## TODO: Magic number
                 #only plot data point if at least 5 non-zero counts are recorded
                 if len(t['counts']) > 100:
                     mean = Utilities.mean(t['counts'])
                     std = Utilities.standard_deviation(t['counts'])
                     value = std/mean
                     
-                    image_id = file.split(Constants.identifier)[1].split(".")[0]
+                    image_id = file.split(self.config.identifier)[1].split(".")[0]
                     
                     # ??? Magic numbers
                     if value > 0 and value < 2 and mean > 0.02 and mean < 80:
@@ -220,8 +187,8 @@ class Cataloguer:
 
     # TODO: Plot title
     def plot_means_and_stds(self):
-        plt.scatter(self.means, self.stds, marker = '.')
-        plt.scatter(self.var_means, self.var_stds, marker = '.', color = 'red')
+        plt.scatter(self.means, self.stds, marker='.')
+        plt.scatter(self.var_means, self.var_stds, marker='.', color='red')
         plt.xlabel("mean")
         plt.ylabel("standard deviation")
         plt.xlim(80, 0)
@@ -229,6 +196,7 @@ class Cataloguer:
         #ensure plot y axis starts from 0
         plt.gca().set_ylim(bottom=0)
         plt.show()
+        plt.close()
     
 
 
@@ -306,10 +274,8 @@ class Cataloguer:
             #if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
             if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
        
-                fname = "{}_{}{:04}{}".format(self.image_prefix, Constants.identifier,
-                        self.id_map[i], Constants.standard_file_extension)
-                light_curve_path = os.path.join(self.workspace_dir, Constants.light_curve_dir, )
-    
+                fname = self.config.source_format_str.format(self.id_map[i])
+                light_curve_path = os.path.join(self.workspace_dir, Constants.light_curve_dir, fname)
                 t = Table.read(light_curve_path, format = Constants.table_format)
                 
                 if len(t['time']) == self.set_size * self.n_sets:
@@ -319,31 +285,34 @@ class Cataloguer:
         
         
 
+
     # TODO: Docs
     def get_wcs_header(self, file):
         ast = AstrometryNet()
         ast.TIMEOUT = 1200
-        ast.api_key = Constants.api_key
+        ast.api_key = self.config.api_key
     
     
-        print("starting job")
+        print("[Astrometry] Starting job")
         try:
-            
             wcs = ast.solve_from_image(file, solve_timeout = 1200)
         except:
             wcs = None
-            print("No WCS found")
+            print("[Astrometry] Error: No WCS found")
         
-        print('finished job')
+        print('[Astrometry] Finished job')
         if not wcs:
-            print('failed')
+            print('[Astrometry] Error: Job failed')
             
         return WCS(header=wcs)
-        #return WCS()   
             
 
         
-            #catalogue all sources that meet the thresholds in the image
+## End of class
+
+
+## TODO: Magic numbers
+#catalogue all sources that meet the thresholds in the image
 def find_stars(image_data, threshold):
     
     #get mean median and standard deviation of the image data
