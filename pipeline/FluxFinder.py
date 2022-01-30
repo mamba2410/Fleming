@@ -6,7 +6,7 @@ from photutils import CircularAnnulus
 from astropy.io import fits
 import numpy as np
 import matplotlib.pyplot as plt
-import Constants 
+import Constants
 
 import Utilities
 
@@ -57,7 +57,7 @@ class FluxFinder:
     def get_shifts(self):
         
         #read shifts in as table
-        t = Table.read(self.config.shifts_path, format=self.config.table_format)
+        t = Table.read(self.config.shift_path, format=self.config.table_format)
         
         self.x_shifts = t['xshifts']
         self.y_shifts = t['yshifts']
@@ -72,7 +72,7 @@ class FluxFinder:
         #each image - below is the expression required
         #to get the shift for the image belong to set number 'set' and image 
         #number 'image_number'
-        index = (set_number-1)*self.set_size + image_number-1
+        index = (set_number-1)*self.config.set_size + image_number-1
         
         total_x = self.x_shifts[index]
         total_y = self.y_shifts[index]
@@ -159,7 +159,7 @@ class FluxFinder:
 
             #check that largest aperture does not exceed the boundaries of the image
             if Utilities.is_within_boundaries(x, y, len(image_data[0]), len(image_data), 15):
-                annulus = CircularAnnulus(xypos, r_in=Constants.inner_radius, r_out=Constants.outer_radius)
+                annulus = CircularAnnulus(xypos, r_in=self.config.inner_radius, r_out=self.config.outer_radius)
                 ann_mask = annulus.to_mask(method='center')
                 weighted_data = ann_mask.multiply(image_data)
                 phot_table2['median'][q] = np.median(weighted_data[weighted_data != 0])
@@ -193,9 +193,9 @@ class FluxFinder:
         
         #build path to image 
         if self.config.has_sets:
-            image_name = self.config.image_format_string.format(set_number, image_number)
+            image_name = self.config.image_format_str.format(set_number, image_number)
         else:
-            image_name = self.config.image_format_string.format(set_number, image_number)
+            image_name = self.config.image_format_str.format(set_number, image_number)
         
         data_path = os.path.join(self.config.image_dir, image_name)
             
@@ -208,7 +208,7 @@ class FluxFinder:
     ## TODO: Closer look
     ## TODO: Breaks if no sets
     def make_light_curves(self):
-        if self.config.has_sets = False:
+        if self.config.has_sets == False:
             print("[FluxFinder] Error: Cannot make light curves, not implemented for has_sets=False")
             exit()
         
@@ -217,11 +217,11 @@ class FluxFinder:
         light_curves = []
           
         #iterate over each image
-        for s in range(1, self.n_sets+1):
-            for i in range(1, self.set_size+1):
+        for s in range(1, self.config.n_sets+1):
+            for i in range(1, self.config.set_size+1):
                 
                 #print("Finding fluxes in image {}".format(str((set-1)*self.set_size + i)))
-                print("[FluxFinder] Finding fluxes in image: set {:1}; image: {:03}".format(s, i))
+                print("[FluxFinder] Making light curve for image: set {:1}; image: {:03}".format(s, i))
                 
                 t = self.find_fluxes(s, i)
                                 
@@ -235,7 +235,7 @@ class FluxFinder:
                         
                     #get time matching the image
                     #date_and_time = times[(set-1) * self.set_size * 2 + (2*i-2)]
-                    date_and_time = times[(s-1)*self.set_size + i-1]
+                    date_and_time = times[(s-1)*self.config.set_size + i-1]
                     
                     #just interested in time part of date and time for now
                     time = date_and_time.split("T")[1]
@@ -318,6 +318,7 @@ class FluxFinder:
     ## TODO: Plot titles
     #plot light curve of star with the given id (from catalogue)
     def plot_light_curve(self, source_id, path=None, adjusted=False):
+        print("[FluxFinder] Plotting light curve for source {}".format(source_id))
         
         if path == None:
             fname = self.config.source_format_str.format(source_id)
@@ -356,7 +357,7 @@ class FluxFinder:
             
 
         image_file = os.path.join(self.config.output_dir, fname)
-        plt.savefig(img_file)
+        plt.savefig(image_file)
         plt.close()
         
 
@@ -437,7 +438,7 @@ class FluxFinder:
                 light_curve = Table([this_times, this_fluxes], names = ('time','counts'))
 
                 fname = self.config.source_format_str.format(source_id)
-                out_path = os.path.join(adjusted_light_curve_dir, fname)
+                out_path = os.path.join(self.config.adjusted_curve_dir, fname)
 
                 light_curve.write(out_path, format=self.config.table_format, overwrite=True)
 
@@ -447,12 +448,12 @@ class FluxFinder:
 
     def get_thumbnail(self, image_n, x, y, size, add_shift):
         
-        n = image_n % self.set_size
+        n = image_n % self.config.set_size
         
         if n == 0:
-            n = self.set_size
+            n = self.config.set_size
             
-        set_number = int((image_n-1) / self.set_size) + 1
+        set_number = int((image_n-1) / self.config.set_size) + 1
         if add_shift:
             #x_shift, y_shift = self.get_total_shift(n, set_number)
             x_shift, y_shift = self.get_total_shift(set_number=set_number, image_number=n)
@@ -479,14 +480,14 @@ class FluxFinder:
         if lx < 0:
             lx = 0
         
-        if rx > Constants.image_width:
-            rx = Constants.image_width-1
+        if rx > self.config.image_width:
+            rx = self.config.image_width-1
         
         if ly < 0:
             ly = 0
         
-        if ry > Constants.image_height:
-            ry = Constants.image_height - 1
+        if ry > self.config.image_height:
+            ry = self.config.image_height - 1
             
             
         return image[ly:ry, lx:rx] # note your x,y coords need to be an int
@@ -510,13 +511,13 @@ class FluxFinder:
 #         apertures = CircularAperture(positions, r=9) 
 #         
 #         #build path to image 
-#         data_path = self.directory + Constants.working_directory + Constants.image_directory + Constants.reduced_prefix + self.image_names
+#         data_path = self.directory + self.config.working_directory + self.config.image_directory + self.config.reduced_prefix + self.image_names
 #         if not self.has_sets:
 #             data_path += "000" + str(image_number)
 #         else:
 #             data_path += "_" + str(set) + "_" + Utilities.format_index(image_number)
 #         
-#         data_path += Constants.fits_extension
+#         data_path += self.config.fits_extension
 #             
 #         #read in image data
 #         image_data = fits.getdata(data_path, ext = 0)
@@ -594,20 +595,20 @@ class FluxFinder:
 #         phot_table2['residual_aperture_sum_med'].info.format = '%.8g'  # for consistent table output
 #         
 #         #build path for flux table output
-#         out_path = self.flux_dir + Constants.flux_prefix + self.image_names
+#         out_path = self.flux_dir + self.config.flux_prefix + self.image_names
 #         
 #         if not self.has_sets:
 #             out_path += "000" + str(image_number)
 #         else:
 #             out_path += "_" + str(set) + "_" + Utilities.format_index(image_number)
 #             
-#         out_path += Constants.standard_file_extension
-#         phot_table2.write(out_path,  format = Constants.table_format, overwrite = True)
+#         out_path += self.config.standard_file_extension
+#         phot_table2.write(out_path,  format = self.config.table_format, overwrite = True)
 #         
 #     def make_light_curves(self):
 #         
 #         #get time of observation for each image
-#         times_file = self.directory + Constants.working_directory + Constants.time_file
+#         times_file = self.directory + self.config.working_directory + self.config.time_file
 #         
 #         times = [line.rstrip('\n') for line in open(times_file)]
 #         
@@ -619,15 +620,15 @@ class FluxFinder:
 #                 print(i)
 #                 
 #                 #build flux path
-#                 file = self.flux_dir + Constants.flux_prefix + self.image_names
+#                 file = self.flux_dir + self.config.flux_prefix + self.image_names
 #                 if not self.has_sets:
 #                     file += "000" + str(i) 
 #                 else:
 #                     file += "_" + str(set) + "_" + Utilities.format_index(i)
-#                 file += Constants.standard_file_extension
+#                 file += self.config.standard_file_extension
 #                 
 #                 #read flux data
-#                 t = Table.read(file, format = Constants.table_format)
+#                 t = Table.read(file, format = self.config.table_format)
 #                 
 #                 #iterate through each source in the table
 #                 for j in range(len(t['id'])):
@@ -678,9 +679,9 @@ class FluxFinder:
 #         #loop through all light curves, writing them out to a file
 #         for j in range(len(light_curves)):
 #             #build light curve path
-#             file = self.light_curve_dir + self.image_names + Constants.identifier + str(j+1) + Constants.standard_file_extension
+#             file = self.light_curve_dir + self.image_names + self.config.identifier + str(j+1) + self.config.standard_file_extension
 #            
 #             table = light_curves[j]
-#             table.write(file, format = Constants.table_format, overwrite=True)
+#             table.write(file, format = self.config.table_format, overwrite=True)
 #             
 # =============================================================================

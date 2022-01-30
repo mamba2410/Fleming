@@ -1,5 +1,5 @@
 from astropy.table import Table
-import Constants   
+import Constants
 import os 
 import Utilities
 import matplotlib.pyplot as plt
@@ -36,7 +36,7 @@ class DataAnalyser:
         self.stds = []
         self.id_map = []
         
-        #cat = Table.read(self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension, format=Constants.table_format)
+        #cat = Table.read(self.filesdir + self.config.working_directory + self.config.catalogue_prefix + self.image_names + self.config.standard_file_extension, format=self.config.table_format)
         
         
         if adjusted:
@@ -50,9 +50,9 @@ class DataAnalyser:
                 
                 #read light curve data from file
                 path = os.path.join(light_curve_dir, file)
-                t = Table.read(path, format=config.table_format)
+                t = Table.read(path, format=self.config.table_format)
                 
-                source_id = file.split(condig.identifier)[1].split(".")[0]
+                source_id = file.split(self.config.identifier)[1].split(".")[0]
 
                 if adjusted:
                     if self.remove_cosmics(t):
@@ -60,7 +60,7 @@ class DataAnalyser:
                     
                                 
                 #only plot data point if at least 5 non-zero counts are recorded
-                if len(t['counts']) > self.set_size*self.n_sets / 3:
+                if len(t['counts']) > self.config.set_size*self.config.n_sets / 3:
                     
                     
                     mean = Utilities.mean(t['counts'])
@@ -78,7 +78,7 @@ class DataAnalyser:
                         self.stds.append(value)
                         self.means.append(mean)
                 
-                        self.id_map.append(int(id))
+                        self.id_map.append(int(source_id))
                 
                     #if Utilities.is_above_line(std, mean, 17, 0, 0.05) and mean > 50:
                     #if value < 0.01 and mean > 3:
@@ -177,7 +177,7 @@ class DataAnalyser:
             
             variability = self.get_variable_score(i)
             
-            if variability > Constants.variability_threshold:
+            if variability > self.config.variability_threshold:
                 
                 t+= 1
                 id = self.id_map[i]
@@ -199,7 +199,7 @@ class DataAnalyser:
     ## TODO: Magic numbers
     def create_thumbnails(self, ff, adjusted=False):
         
-        #light_curve_dir = self.filesdir + Constants.working_directory + Constants.adjusted_curves_subdir
+        #light_curve_dir = self.filesdir + self.config.working_directory + self.config.adjusted_curves_subdir
         if adjusted:
             light_curve_dir = self.config.adjusted_curve_dir
         else:
@@ -207,7 +207,7 @@ class DataAnalyser:
         
         for i in range(len(self.results_table['id'])):
 
-            fname = self.config.source_format_str.format(self.results_table['id'])
+            fname = self.config.source_format_str.format(int(self.results_table['id'][i]))
             path = os.path.join(light_curve_dir, fname)
             t = Table.read(path, format=self.config.table_format)
             
@@ -224,8 +224,8 @@ class DataAnalyser:
             i_x = self.results_table['xcentroid'][i]
             i_y = self.results_table['ycentroid'][i]
             
-            print("[DataAnalyser] Creating thumbnail for source id {}, centroid {},{}".format(
-                self.results_table['id'][i], i_x, i_y))
+            print("[DataAnalyser] Creating thumbnail for source id {:04}, centroid {},{}".format(
+                int(self.results_table['id'][i]), i_x, i_y))
             
             ## Magic numbers
             dim = ff.get_thumbnail(i_dim+1, i_x, i_y, 20, True)
@@ -370,7 +370,7 @@ class DataAnalyser:
 
         self.results_table.write(results_fname, format=self.config.table_format, overwrite=True)
         Utilities.make_reg_file(self.config.output_dir,
-                self.condif.image_prefix + "_variables", self.results_table)
+                self.config.image_prefix + "_variables", self.results_table)
 
 
        
