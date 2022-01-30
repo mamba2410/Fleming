@@ -12,8 +12,8 @@ from astropy.visualization import (ZScaleInterval, LinearStretch,
 class DataAnalyser:
     
     
-    image_names = None
-    filesdir = None
+    image_prefix = None
+    workspace_dir = None
     means = []
     stds = []
     var_stds = []
@@ -29,13 +29,13 @@ class DataAnalyser:
     variable_ids = []
     
     
-    def __init__(self, filesdir, image_names, has_sets, set_size, n_sets):
-        self.filesdir = filesdir
-        self.image_names = image_names
+    def __init__(self, workspace_dir, image_prefix, has_sets, n_sets=0, set_size=0):
+        self.workspace_dir = workspace_dir
+        self.image_prefix = image_prefix
         self.has_sets = has_sets
         self.set_size = set_size
         self.n_sets = n_sets
-        self.light_curve_dir = filesdir + Constants.working_directory  + Constants.light_curve_directory
+        self.light_curve_dir = os.path.join(workspace_dir, Constants.light_curve_subdir)
 
         
     #plot the means and standard deviations of all light curves generated
@@ -49,21 +49,21 @@ class DataAnalyser:
         #cat = Table.read(self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension, format=Constants.table_format)
         
         
-        if not adjusted:
-            light_curve_dir = self.filesdir + Constants.working_directory + Constants.light_curve_directory
+        if adjusted:
+            light_curve_dir = os.path.join(self.workspace_dir, Constants.adjusted_curves_subdir)
         else:
-            light_curve_dir = self.filesdir + Constants.working_directory + Constants.adjusted_curves_directory
+            light_curve_dir = self.light_curve_dir
 
         #for each file in the light curve directory 
         for file in os.listdir(light_curve_dir):
             
-            if file[:len(self.image_names)] == self.image_names:
+            if file[:len(self.image_prefix)] == self.image_prefix:
                 
                 #print(file)
                 #read light curve data from file
                 t = Table.read(light_curve_dir + file, format = Constants.table_format)
                 
-                id = file.split("id")[1].split(".")[0]
+                id = file.split(Constants.identifier)[1].split(".")[0]
 
                 if adjusted:
                     if self.remove_cosmics(t):
@@ -99,26 +99,37 @@ class DataAnalyser:
         if adjusted:
             print("Floor at " + str(min(self.stds)))
         
-    def plot_means_and_stds(self, adjusted):
-       
-        _ = plt.figure(figsize=(16, 10))
 
-        _ = plt.scatter(self.means, self.stds, marker = '.');
-        _ = plt.scatter(self.var_means, self.var_stds, marker = '.', color = 'red');
-        _ = plt.xscale('log')
-        _ = plt.yscale('log')
-        _ = plt.xlabel("mean counts")
-        _ = plt.ylabel("standard deviation")
-        _ = plt.xlim(self.means[len(self.means)-1] * 1.3, self.means[0] * 0.7)
+
+    ## TODO: Plot titles
+    def plot_means_and_stds(self, suffix=""):
+
+        output_dir = os.path.join(self.workspace_dir, Constants.output_subdir)
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+
+        #plt.figure(figsize=(16, 10))
+
+        plt.scatter(self.means, self.stds, marker = '.');
+        plt.scatter(self.var_means, self.var_stds, marker = '.', color = 'red');
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel("mean counts")
+        plt.ylabel("standard deviation")
+        plt.xlim(self.means[len(self.means)-1] * 1.3, self.means[0] * 0.7)
         
         #ensure plot y axis starts from 0
-        _ = plt.gca().set_ylim(bottom=0)
+        plt.gca().set_ylim(bottom=1e-9)
         
-        suf = ""
-        if adjusted:
-            suf = "_adjusted"
-        _ = plt.savefig(Constants.folder + Constants.working_directory + Constants.output_directory + "SDvMean" + suf)
+        fname = "std_dev_mean{}.jpg".format(suffix)
+        path = os.path.join(output_dir, fname)
+
+        plt.savefig(path)
+        plt.close()
     
+
+
+
     #returns a score determining the variability of the star
     def get_variable_score(self, index):
         
@@ -166,11 +177,14 @@ class DataAnalyser:
         self.var_means = []
         self.var_stds = []
         
-        cat = Table.read(self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension, format=Constants.table_format)
+        fname = "{}{}{}".format(Constants.catalogue_prefix, 
+                self.image_prefix, Constants.standard_file_extension)
+        catalogue_path = os.path.join(self.workspace_dir, fname)
+        cat = Table.read(catalogue_path, format=Constants.table_format)
 
         self.results_table = Table(names = ('id', 'xcentroid', 'ycentroid', 'variability', 'RA', 'DEC'))
         
-        ff = FluxFinder.FluxFinder(Constants.folder, Constants.file_name, True, 9, 50)
+        ff = FluxFinder.FluxFinder(self.workspace_dir, self.image_prefix, True, 9, 50)
 
         for i in range(len(self.means)):
             
@@ -195,14 +209,21 @@ class DataAnalyser:
         
             
     
-    def create_thumbnails(self, ff):
+    ## TODO: Magic numbers
+    def create_thumbnails(self, ff, adjusted=False):
         
-        light_curve_dir = self.filesdir + Constants.working_directory + Constants.adjusted_curves_directory
+        #light_curve_dir = self.filesdir + Constants.working_directory + Constants.adjusted_curves_subdir
+        if adjusted:
+            light_curve_dir = os.path.join(self.workspace_dir, Constants.adjusted_curves_subdir)
+        else:
+            light_curve_dir = os.path.join(self.workspace_dir, Constants.light_curve_subdir)
         
         for i in range(len(self.results_table['id'])):
 
-            file = light_curve_dir + Constants.file_name + "id" + str(int(self.results_table['id'][i])) + ".txt"
-            t = Table.read(file, format = Constants.table_format)
+            fname= "{}_{}{:04}{}".format(self.image_prefix, Constants.identifier,
+                    int(self.results_table['id'][i]), Constants.standard_file_extension)
+            path = os.path.join(light_curve_dir, fname)
+            t = Table.read(path, format = Constants.table_format)
             
             i_dim = 0
             i_bright = 0
@@ -217,14 +238,15 @@ class DataAnalyser:
             i_x = self.results_table['xcentroid'][i]
             i_y = self.results_table['ycentroid'][i]
             
-            print(i_x, i_y)
+            print("Creating thumbnail for id {}, centroid {},{}".format(
+                self.results_table['id'][i], i_x, i_y))
             
-            print(self.results_table['id'][i])
-            
+            ## Magic numbers
             dim = ff.get_thumbnail(i_dim+1, i_x, i_y, 20, True)
             bright = ff.get_thumbnail(i_bright+1, i_x, i_y, 20, True)
             
-            output_dir = self.filesdir + Constants.working_directory  + Constants.output_directory
+            #output_dir = self.filesdir + Constants.working_directory  + Constants.output_directory
+            output_dir = os.path.join(self.workspace_dir, Constants.output_subdir)
 
         
             fig = plt.figure()
@@ -242,18 +264,19 @@ class DataAnalyser:
             bright_norm = ImageNormalize(bright, interval=ZScaleInterval(), stretch=LinearStretch())
             plt.imshow(bright, origin='upper', cmap='gray', norm = bright_norm)
             
-            plt.savefig(output_dir + "id_" + str(int(self.results_table['id'][i])) + ".jpg")
+            fname= "thumb_{}_{}{:04}.jpg".format(self.image_prefix, Constants.identifier,
+                    int(self.results_table['id'][i]), Constants.standard_file_extension)
+            path = os.path.join(output_dir, fname)
 
-
-
-
-            
+            plt.savefig(path)
+            plt.close()
             
             
 
             
         
         
+    ## TODO: Magic numbers
     #same function in cataloguer - remove one
     #probably from cataloguer
     #comments in other
@@ -267,7 +290,9 @@ class DataAnalyser:
             #if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
             #if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
             if not self.id_map[i] in self.variable_ids:
-                light_curve_path = self.filesdir + Constants.working_directory + Constants.light_curve_directory + self.image_names + Constants.identifier + str(self.id_map[i]) + Constants.standard_file_extension
+                fname= "{}_{}{:04}{}".format(self.image_prefix, Constants.identifier,
+                    self.id_map[i], Constants.standard_file_extension)
+                light_curve_path = os.path.join(self.light_curve_dir, fname)
 
                 t = Table.read(light_curve_path, format = Constants.table_format)
                 
@@ -275,14 +300,19 @@ class DataAnalyser:
                     ids.append(self.id_map[i])
         return ids
     
+
+
     #duplicate method in ff - remove this?
     #comments in other
     def make_avg_curve(self, ids):
                 
         for i in range(len(ids)):
             file = self.light_curve_dir + self.image_names + Constants.identifier + str(ids[i]) + Constants.standard_file_extension
+            fname= "{}_{}{:04}{}".format(self.image_prefix, Constants.identifier,
+                self.id_map[i], Constants.standard_file_extension)
+            light_curve_path = os.path.join(self.light_curve_dir, fname)
             
-            t = Table.read(file, format = Constants.table_format)
+            t = Table.read(light_curve_path, format = Constants.table_format)
             
             fluxes = t['counts']
             
@@ -302,21 +332,29 @@ class DataAnalyser:
         
         light_curve = Table([self.times, self.avg_fluxes], names = ('time','counts') )
 
-        file = self.directory + Constants.working_directory + self.image_names + "_avg" + Constants.standard_file_extension
-        light_curve.write(file, format = Constants.table_format, overwrite=True)
+        fname= "{}_avg{}".format(self.image_prefix, Constants.standard_file_extension)
+        path = os.path.join(self.light_curve_dir, fname)
+        light_curve.write(path, format = Constants.table_format, overwrite=True)
 
+
+
+    ## TODO: 
     #duplicate method in ff - remove this?
     #comments in other
     def divide_by_average(self):
         
-        adjusted_light_curve_dir = self.filesdir + Constants.working_directory  + Constants.adjusted_curves_directory
+        adjusted_light_curve_dir = os.path.join(
+                self.workspace_dir, Constants.adjusted_curves_subdir)
+
         if not os.path.exists(adjusted_light_curve_dir):
             os.mkdir(adjusted_light_curve_dir)        
                     
+        #for all files
         for file in os.listdir(self.light_curve_dir):
-            if file[:len(self.image_names)] == self.image_names:
+            if file[:len(self.image_prefix)] == self.image_prefix:
                 
-                t = Table.read(self.light_curve_dir + file, format = Constants.table_format)
+                path = os.path.join(self.light_curve_dir, file)
+                t = Table.read(path, format = Constants.table_format)
                                                 
                 this_fluxes = t['counts']
                 this_times = t['time']
@@ -326,22 +364,28 @@ class DataAnalyser:
                 for i in range(len(this_fluxes)):
                     time = this_times[i]
                     
+                    #divide each flux measurement by the average flux measurement
+                    #at its respective point in time
                     for j in range(len(self.avg_fluxes)):
                         if time == self.times[j]:
                             this_fluxes[i] = this_fluxes[i] / self.avg_fluxes[j]
                             #print(this_fluxes[i])
                 
+                #export adjusted light curve
                 light_curve = Table([this_times, this_fluxes], names = ('time','counts'))
-    
-                
-                out_file = adjusted_light_curve_dir + self.image_names + Constants.identifier + str(id) + Constants.standard_file_extension
-                light_curve.write(out_file, format = Constants.table_format, overwrite=True)
+
+                fname = "{}_{}{:04}{}".format(
+                        self.image_prefix, Constants.identifier, id, Constants.standard_file_extension)
+                out_path = os.path.join(adjusted_light_curve_dir, fname)
+
+                light_curve.write(out_path, format = Constants.table_format, overwrite=True)
 
         
+    ## TODO: Quicksort
     #save table of variable stars (in order of decreasing variability)
     def output_results(self):
         
-        output_dir = self.filesdir + Constants.working_directory  + Constants.output_directory
+        output_dir = os.path.join(self.workspace_dir, Constants.output_subdir)
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)  
         
@@ -349,8 +393,12 @@ class DataAnalyser:
         
         
         Utilities.quicksort(a, False)
-        self.results_table.write(output_dir + self.image_names + "_results" + Constants.standard_file_extension, format = Constants.table_format, overwrite = True)
-        Utilities.make_reg_file(output_dir, self.image_names + "_variables", self.results_table)
+
+        results_fname = "{}_results{}".format(self.image_prefix, Constants.standard_file_extension)
+        results_path = os.path.join(output_dir, results_fname)
+
+        self.results_table.write(results_fname, format = Constants.table_format, overwrite = True)
+        Utilities.make_reg_file(output_dir, self.image_prefix + "_variables", self.results_table)
 
        
     def remove_cosmics(self, t):
@@ -399,4 +447,4 @@ class DataAnalyser:
             
         return True
           
-    
+

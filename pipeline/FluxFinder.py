@@ -369,10 +369,10 @@ class FluxFinder:
             fname = "{}_{}{:04}{}".format(
                     self.image_prefix, Constants.identifier, id, Constants.standard_file_extension)
             if not adjusted:
-                file = os.path.join(self.light_curve_dir, fname)
+                path = os.path.join(self.light_curve_dir, fname)
             else:
-                file = os.path.join(
-                        self.workspace_dir, Constants.adjusted_curves_directory, fname)
+                path = os.path.join(
+                        self.workspace_dir, Constants.adjusted_curves_subdir, fname)
 
         table = Table.read(path, format=Constants.table_format)
         
@@ -400,7 +400,7 @@ class FluxFinder:
         fname = "LC_{}_{}{:04}.jpg".format(
                 self.image_prefix, Constants.identifier, id)
         image_file = os.path.join(
-                self.workspace_dir, Constants.output_directory, fname)
+                self.workspace_dir, Constants.output_subdir, fname)
 
         plt.close()
         
@@ -457,7 +457,7 @@ class FluxFinder:
     def divide_by_average(self):
         
         adjusted_light_curve_dir = os.path.join(
-                self.workspace_dir, Constants.adjusted_curves_directory)
+                self.workspace_dir, Constants.adjusted_curves_subdir)
 
         if not os.path.exists(adjusted_light_curve_dir):
             os.mkdir(adjusted_light_curve_dir)        
@@ -506,7 +506,8 @@ class FluxFinder:
             
         set_number = int((image_n-1) / self.set_size) + 1
         if add_shift:
-            x_shift, y_shift = self.get_total_shift(n, set_number)
+            #x_shift, y_shift = self.get_total_shift(n, set_number)
+            x_shift, y_shift = self.get_total_shift(set_number, n)
         else:
             x_shift = 0
             y_shift = 0
