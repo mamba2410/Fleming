@@ -26,9 +26,9 @@ print("Started at " + current_time)
 #Utilities.print_job("reducing images")
 
 
-#c = Cataloguer.Cataloguer(Constants.workspace_dir, Constants.image_prefix, Constants.has_sets, Constants.set_size, Constants.n_sets)
-#c.catalogue(os.path.join(Constants.workspace_dir, Constants.image_subdir, 
-#        "{}_{:1}_{:03}{}".format(Constants.image_prefix, 1, 1, Constants.fits_extension)))
+c = Cataloguer.Cataloguer(Constants.workspace_dir, Constants.image_prefix, Constants.has_sets, Constants.set_size, Constants.n_sets)
+c.catalogue(os.path.join(Constants.workspace_dir, Constants.image_subdir, 
+        "{}_{:1}_{:03}{}".format(Constants.image_prefix, 1, 1, Constants.fits_extension)))
 
 #mof = MovingObjectFinder.MovingObjectFinder(Constants.folder)
 #mof.find_moving_objects()
