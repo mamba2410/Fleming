@@ -365,6 +365,7 @@ class FluxFinder:
     #from the resulting curves
     #use median
     def make_avg_curve(self, ids):
+        print("[DEBUG] Calling `make_avg_curve` in FluxFinder")
                 
         #iterate through each star in the given list
         for i in range(len(ids)):
@@ -408,6 +409,7 @@ class FluxFinder:
 
     #divide all light curves by the average light curve. Removes noise
     def divide_by_average(self):
+        print("[DEBUG] Calling `divide_by_average` in FluxFinder")
                     
         #for all files
         for file in os.listdir(self.config.light_curve_dir):

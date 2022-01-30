@@ -266,6 +266,7 @@ class Cataloguer:
     #the average light curve is subtracted from each printed light curve to 
     #reduce bias
     def get_ids_for_avg(self):
+        print("[DEBUG] Calling `get_ids_for_avg` in Cataloguer")
         
         ids = []
         
@@ -275,10 +276,10 @@ class Cataloguer:
             if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
        
                 fname = self.config.source_format_str.format(self.id_map[i])
-                light_curve_path = os.path.join(self.workspace_dir, Constants.light_curve_dir, fname)
-                t = Table.read(light_curve_path, format = Constants.table_format)
+                light_curve_path = os.path.join(self.config.light_curve_dir, fname)
+                t = Table.read(light_curve_path, format=self.config.table_format)
                 
-                if len(t['time']) == self.set_size * self.n_sets:
+                if len(t['time']) == self.config.set_size * self.config.n_sets:
                     ids.append(self.id_map[i])
     
         return ids
