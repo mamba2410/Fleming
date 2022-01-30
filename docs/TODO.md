@@ -2,6 +2,7 @@
 
 ## Immediate improvements
 
+- Reformat `Constants.py` -> `Config.py` and have it be an object to pass around
 - Clean up `Constants.py` and make it be used consistently.
 	- `_dir` is a full directory path, `_subdir` is a sub-path
 	- `_path` is a full path to a file, `_fname` is a base file name
