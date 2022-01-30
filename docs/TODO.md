@@ -17,6 +17,7 @@
 ## Possible bugs
 
 - Fix `WARNING: Fit may be unsuccessful` in `ShiftFinder.py`
+- Rerunning something (either in DA or FF) adds more times to the times file.
 
 
 ## Future plans
