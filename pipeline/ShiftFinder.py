@@ -7,29 +7,11 @@ import Utilities
 import numpy as np
 
 class ShiftFinder:
-    
-    #directory containing raw images
-    workspace_dir = None
-    
-    #image name regex
-    image_prefix = None
-    
-    #are the images stored in sets?
-    has_sets = None
-    
-    #number of sets 
-    n_sets = None
-    
-    #number of images in each set
-    set_size = None
-    
-    def __init__(self, workspace_dir, image_prefix, has_sets, set_size, n_sets):
-        self.workspace_dir = workspace_dir
-        self.image_prefix = image_prefix
-        self.has_sets = has_sets
-        self.n_sets = n_sets
-        self.set_size = set_size
 
+    config = None
+    
+    def __init__(self, config):
+        self.config = config
 
     
     # TODO: Quicksort, magic numbers
@@ -37,10 +19,7 @@ class ShiftFinder:
     def get_reference_coordinates(self):
         
         #reads in catalogue
-        table_fname = "{}{}{}".format(
-                Constants.catalogue_prefix, self.image_prefix, Constants.standard_file_extension)
-        table_path = os.path.join(self.workspace_dir, table_fname)
-        t = Table.read(table_path, format=Constants.table_format)
+        t = Table.read(self.config.catalogue_path, format=self.config.table_format)
 
         xs = t["xcentroid"]
         ys = t["ycentroid"]
@@ -81,6 +60,7 @@ class ShiftFinder:
         #size = 10  # 10 will make a 20x20 pixel box
         
         # open the next image and load it as an array
+        # TODO: Use get_image from other class
         image = fits.open(image_path)
         data_array = image[0].data
         
@@ -104,12 +84,9 @@ class ShiftFinder:
     ## TODO: Fix fit warnings
     def get_all_shifts(self):
         
-        #build filepath to file in which shifts will be stored       
-        shift_path = os.path.join(Constants.workspace_dir, Constants.shift_fname)
-        
         #empty shift file if it exists
-        if(os.path.exists(shift_path)):
-            open(shift_path, "w").close()
+        if(os.path.exists(self.config.shift_path)):
+            open(self.config.shift_path, "w").close()
         
         x_shifts = []
         y_shifts = []
@@ -121,26 +98,17 @@ class ShiftFinder:
         
         
         #iterate through each image in each set
-        for s in range(1, self.n_sets + 1):
-            for i in range(1, self.set_size+1):    
+        for s in range(1, self.config.n_sets+1):
+            for i in range(1, self.config.set_size+1):    
 
-                print("Finding shifts in image: set {:1}; image {:03}".format(s, i))
-
-                ## TODO: Make this a utils function
-                #build image file path
-                if self.has_sets:
-                    format_str = "{}{}_{}_{}{}".format(Constants.reduced_prefix, 
-                            self.image_prefix, "{:1}", "{:03}", Constants.fits_extension)
-                else:
-                    format_str = "{}{}_{}{}".format(Constants.reduced_prefix, 
-                            self.image_prefix, "{:04}", Constants.fits_extension)
+                print("[ShiftFinder] Finding shifts in image: set {:1}; image {:03}".format(s, i))
 
                 if self.has_sets:
-                    image_path = os.path.join(self.workspace_dir, 
-                            Constants.image_subdir, format_str.format(s, i))
+                    image_path = os.path.join(self.config.image_dir,
+                            self.config.image_format_str.format(s, i))
                 else:
-                    image_path = os.path.join(self.workspace_dir, 
-                            Constants.image_subdir, format_str.format(i))
+                    image_path = os.path.join(self.config.image_dir,
+                            self.config.image_format_str.format(i))
 
                 
                 avg_x = []
@@ -182,7 +150,7 @@ class ShiftFinder:
         table = Table([x_shifts, y_shifts], names = ('xshifts','yshifts'))
         
         #export shifts as table 
-        table.write(shift_path, format = Constants.table_format, overwrite=True)
+        table.write(shift_path, format=self.config.table_format, overwrite=True)
     
 ## TODO: Remove
 #    #I believe this is redundant
