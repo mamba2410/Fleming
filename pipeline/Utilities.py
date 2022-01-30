@@ -1,5 +1,6 @@
 from datetime import datetime
 import Constants
+import os
 from astropy.io import fits
 
 
@@ -108,7 +109,9 @@ def print_job(job):
 #make .region file for comparing catalogue to actual image
 def make_reg_file(directory, name, table):
     
-    f = open(directory + name + ".reg", "w")
+    fname = "{}.reg".format(name)
+    path = os.path.join(directory, fname)
+    f = open(path, "w")
     
     xs = table['xcentroid']
     ys = table['ycentroid']

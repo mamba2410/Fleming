@@ -53,7 +53,7 @@ class Cataloguer:
 
         ## ??
         Utilities.make_reg_file(
-                os.path.join(self.workspace_dir), self.image_prefix, sources)
+                os.path.join(self.config.workspace_dir), self.config.image_prefix, sources)
         
         print("[Cataloguer] Catalogued {} objects".format(self.n_sources))
         
@@ -61,7 +61,7 @@ class Cataloguer:
         self.convert_to_ra_and_dec(image_path, sources)
         
         #write the catalogue to the catalogue file
-        sources.write(self.config.catalogue_path, format=config.table_format, overwrite=True)
+        sources.write(self.config.catalogue_path, format=self.config.table_format, overwrite=True)
         
         ## Clear time tile
         if(os.path.exists(self.config.time_path)):
@@ -74,12 +74,14 @@ class Cataloguer:
                 
                 #build image filepath 
                 if self.config.has_sets:
-                    image_file = os.path.join(self.config.workspace_dir, self.config.format_str.format(s, i))
+                    image_file = os.path.join(self.config.image_dir,
+                            self.config.image_format_str.format(s, i))
                 else:
-                    image_file = os.path.join(self.config.workspace_dir, self.config.format_str.format(i))
+                    image_file = os.path.join(self.config.image_dir,
+                            self.config.image_format_str.format(i))
                 
                 #store the time which the current image was taken
-                self.add_times(self.config.time_path, fits.getheader(image_file))
+                self.add_times(fits.getheader(image_file))
     
 
 
@@ -90,7 +92,7 @@ class Cataloguer:
                 
         for i in range(len(sources)):
             
-            if sources['flux'][i] > Constants.flux_cutoff or not Utilities.is_within_boundaries(sources['xcentroid'][i], sources['ycentroid'][i], len(image_data[0]), len(image_data), Constants.edge_limit):
+            if sources['flux'][i] > self.config.flux_cutoff or not Utilities.is_within_boundaries(sources['xcentroid'][i], sources['ycentroid'][i], len(image_data[0]), len(image_data), self.config.edge_limit):
                 to_remove.append(i)
         
         for i in range(len(to_remove)):

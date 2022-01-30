@@ -1,64 +1,11 @@
 import os
 
-## Per-user things
-#folder = "C:\\Users\\callu\\uni-git\\masters-project\\fleming\\pipeline\\"  # Pipeline root
-pipeline_dir = "/home/callum/repos/uni-git/masters-project/fleming/pipeline/"
-api_key = ""                                                # Astrometry.net API key
-with open(os.path.join(pipeline_dir, "astrometry_api_key.txt")) as f:
-    api_key = f.read().replace("\n", "")
-
-
-### General directories
-#workspace_subdir = "workspace/"         # Where to store everything
-#workspace_dir = join(pipeline_dir, workspace_subdir)
-#image_subdir = "../images/0121/"        # Where the JGT images are
-#fits_extension = ".fit"
-##reduced_prefix = "r_"
-#reduced_prefix = ""                     # Not used
-#catalogue_prefix = "catalogue_"         #
-#standard_file_extension = ".txt"        #
-#table_format = "ascii"                  #
-#time_fname = "times" + standard_file_extension          #
-#shift_fname = "shifts" + standard_file_extension        #
-#catalogue_shift_fname = "catalogue_" + shift_fname      #
-#flux_subdir = "fluxes/"                                 #
-#light_curve_subdir = "light_curves/"                    #
-#flux_prefix = "fluxes_"                                 #
-#identifier = "id"                                       #
-#id_map_fname = "id_mapping" + standard_file_extension   #
-#adjusted_curves_subdir = "adjusted_light_curves/"       #
-#output_subdir = "results/"                              #
-#moving_obj_subdir = "moving_objects/"                   #
-#moving_obj_fname = "moving_objects.txt"                 #
-#streak_subdir = "streaks/"                              #
-#streak_fname = "streaks.txt"                            #
-#job_fname = "astrometryjob.txt"                         #
-#line_ending = "\n"                                      #
-#
-### Tweaking constants
-#variability_threshold = 0.8         # units?
-#check_radius = 10                   # Pixels?
-#cosmic_threshold = 5                # units?
-#flux_cutoff = 100                   # Counts?
-#edge_limit = 50                     # units?
-#inner_radius = 8                    # Pixels?
-#outer_radius = 13                   # Pixels?
-#moving_obj_check_image = 30         # units?
-#
-### Per-run constants
-#image_width = 2432          # Doesn't change unless not using
-#image_height = 1600         # SX Trius on the JGT
-#image_prefix = "l137_0"
-#has_sets = True             # Images split up into n*m blocks of exposures
-#set_size = 50               # Images per set
-#n_sets = 7                  # Number of sets total
-
 
 class Config:
-    pipeline_root       = "."
-    workspace_dir       = ""
-    image_dir           = ""
     
+    ## Defaults for the config.
+    ## These shouldn't need changing here
+    ## Set these when creating the constructor in Main.py
     def __init__(self,
             pipeline_root       = ".",
             workspace_subdir    = "workspace",
@@ -80,7 +27,7 @@ class Config:
             catalogue_prefix    = "catalogue_",
             flux_prefix         = "flux_",
 
-            fits_extension      = ".fits",
+            fits_extension      = ".fit",
             standard_file_extension = ".txt",
 
             line_ending         = "\n",
@@ -88,7 +35,7 @@ class Config:
             table_format        = "ascii",
 
             variability_threshold   = 0.8,
-            check_raduis            = 10,
+            check_radius            = 10,
             cosmic_threshold        = 5,
             flux_cutoff             = 100,
             edge_limit              = 50,
@@ -102,6 +49,9 @@ class Config:
             has_sets            = True,
             set_size            = 50,
             n_sets              = 7,
+
+            api_key             = "",
+            api_key_file        = "astrometry_api_key.txt"
             ):
 
         self.pipeline_root          = pipeline_root
@@ -152,7 +102,16 @@ class Config:
         self.set_size           = set_size
         self.n_sets             = n_sets
 
+        self.api_key_file       = api_key_file
+        self.api_key            = api_key
+
+
         ## ===============
+        ## Setting up other stuff
+
+        with open(os.path.join(pipeline_root, api_key_file)) as f:
+            self.api_key = f.read().replace(line_ending, "")
+
 
         fname = "{}{}{}".format(catalogue_prefix, image_prefix, standard_file_extension)
         self.catalogue_path = os.path.join(self.workspace_dir, fname)
@@ -166,6 +125,34 @@ class Config:
 
         self.source_format_str      = "{}_{}{}{}".format(
                 image_prefix, identifier, "{:04}", standard_file_extension)
+
+
+        ## ===============
+        ## Create directories if they don't exist
+
+        if not os.path.exists(self.workspace_dir):
+            os.mkdir(self.workspace_dir)
+
+        if not os.path.exists(self.image_dir):
+            os.mkdir(self.image_dir)
+
+        if not os.path.exists(self.flux_dir):
+            os.mkdir(self.flux_dir)
+
+        if not os.path.exists(self.light_curve_dir):
+            os.mkdir(self.light_curve_dir)
+
+        if not os.path.exists(self.adjusted_curve_dir):
+            os.mkdir(self.adjusted_curve_dir)
+
+        if not os.path.exists(self.output_dir):
+            os.mkdir(self.output_dir)
+
+        if not os.path.exists(self.streak_dir):
+            os.mkdir(self.streak_dir)
+
+        if not os.path.exists(self.moving_obj_dir):
+            os.mkdir(self.moving_obj_dir)
 
 
 
