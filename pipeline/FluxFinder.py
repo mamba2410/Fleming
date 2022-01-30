@@ -472,7 +472,7 @@ class FluxFinder:
                 this_fluxes = t['counts']
                 this_times = t['time']
                 
-                id = file.split("id")[1].split(".")[0]
+                id = file.split(Constants.identifier)[1].split(".")[0]
                 
                 for i in range(len(this_fluxes)):
                     time = this_times[i]
