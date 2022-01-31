@@ -309,7 +309,7 @@ class FluxFinder:
         
         
         
-    def plot_light_curve(self, source_id, path=None, adjusted=False):
+    def plot_light_curve(self, source_id, path=None, adjusted=False, show=False):
         """
         Plot light curve of star with the given ID from catalogue
 
@@ -372,6 +372,8 @@ class FluxFinder:
             plt.title("Light curve for unknown source (id {}) (adjusted={})"
                 .format(source_id, adjusted))
             
+        if show:
+            plt.show()
 
         image_file = os.path.join(self.config.output_dir, fname)
         plt.savefig(image_file)

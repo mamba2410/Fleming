@@ -311,7 +311,7 @@ class Cataloguer:
         
             
     ## TODO:Improve this
-    def show_variables(self, ff):
+    def show_variables(self, ff, show=True):
         """
         Print plots of all variable stars in database
 
@@ -323,7 +323,7 @@ class Cataloguer:
         
         for i in range(len(self.means)):
             if self.is_variable(i):
-                ff.plot_light_curve(self.id_map[i], None, True)
+                ff.plot_light_curve(self.id_map[i], adjusted=True, show=show)
         
 
 
