@@ -2,22 +2,22 @@ from photutils import DAOStarFinder
 from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
 from astropy.wcs import WCS
-import os
-import os.path
-import Constants
-import Utilities
 from astropy.table import Table
+from astroquery.astrometry_net import AstrometryNet
+import os
 import matplotlib.pyplot as plt
 import FluxFinder
-from astroquery.astrometry_net import AstrometryNet
+import Utilities
+import Constants
 
-#remove stars within 10 pixels on edge
-#add xy dimensions of image as global variable
 
 class Cataloguer:
+    """
+    Cataloguer class
+    ----------
+    """
 
     config = None           # Config object
-    
     n_sources = 0           # Number of sources
 
     means = []
@@ -28,20 +28,31 @@ class Cataloguer:
     avgs = []
     
     id_map = []
-    wcs = None
-
+    wcs = None          ## TODO: Do something with this
 
     
-    ## Constructor
     def __init__(self, config):
+        """
+        Parameters
+        ----------
+
+        config: Constants.Config
+        """
         self.config = config
 
 
-    #generate a catalogue of all the stars in the given image, and a list of 
-    #the times at which each image was taken 
     def catalogue(self, image_path):
+        """
+        Generates a catalogue of all the stars in the given image, as well as
+        a list of the times at which each image was taken.
 
-        #read in first image data
+        Parameters
+        ----------
+        image_path: string, path to the fits image to catalogue all the stars.
+
+        """
+
+        #read in image data
         image_data = fits.getdata(image_path, ext=0)
         
         ## TODO: Magic number
@@ -51,9 +62,8 @@ class Cataloguer:
         self.n_sources = len(sources['id'])
 
 
-        ## ??
-        Utilities.make_reg_file(
-                os.path.join(self.config.workspace_dir), self.config.image_prefix, sources)
+        ## Write all sources to a file
+        Utilities.make_reg_file(self.config.workspace_dir, self.config.image_prefix, sources)
         
         print("[Cataloguer] Catalogued {} objects".format(self.n_sources))
         
@@ -85,29 +95,46 @@ class Cataloguer:
     
 
 
-    ## 
     def remove_stars(self, sources, image_data):
+        """
+        Removes stars from a source catalogue given cutoff parameters
+        from the config object
+        """
         
         to_remove = []
                 
         for i in range(len(sources)):
             
-            if sources['flux'][i] > self.config.flux_cutoff or not Utilities.is_within_boundaries(sources['xcentroid'][i], sources['ycentroid'][i], len(image_data[0]), len(image_data), self.config.edge_limit):
+            is_too_bright = sources['flux'][i] > self.config.flux_cutoff
+            is_within_boundaries = Utilities.is_within_boundaries(
+                    sources['xcentroid'][i],
+                    sources['ycentroid'][i],
+                    len(image_data[0]),
+                    len(image_data),
+                    self.config.edge_limit)
+
+            if is_too_bright or not is_within_boundaries:
                 to_remove.append(i)
         
+
+        ## Remove rows from sources table
         for i in range(len(to_remove)):
             sources.remove_row(to_remove[i] - i)
     
             
-        print("[Cataloguer] removed {} objects".format(len(to_remove)))
+        print("[Cataloguer] filtered out {} objects".format(len(to_remove)))
         
 
 
 
-    #investigate what this is doing 
-    #convert all of the source x and y positions to RA and DEC
     def convert_to_ra_and_dec(self, image_file, sources=None):
+        """
+        Converts all the source positions in the image to RA and DEC.
+        Uses World Coordinate System (wcs) from the fits image.
+        """
         
+        print("[Cataloguer] Getting coordinate system for image '{}'".format(image_file))
+
         # find the wcs assosiated with the fits image using astropy and the header
         self.wcs = self.get_wcs_header(image_file)
         
@@ -124,25 +151,37 @@ class Cataloguer:
 
 
 
-    #add the time of the specified image file being taken to the times file
     def add_times(self, image_header):
+        """
+        Add the time of the specified image file being taken to the times file
+
+        Parameters
+        ----------
+
+        image_header: fits header for image to add
+        """
         
         #open time file in appending mode 
         with open(self.config.time_path, "a+") as f:
             #write date of observation to file 
             f.write("{}{}".format(image_header['DATE-OBS'], self.config.line_ending))
         
+
+
     
     
-    #plot the means and standard deviations of all light curves generated
     def get_means_and_stds(self, adjusted=False):
+        """
+        Find the means and standard deviations of all light curves generated.
+
+        Parameters:
+        adjusted: bool. Has the light curves been adjusted (divided by average)
+        """
         
-        #build path of the directory in which the light curves are stored
         self.means = []
         self.stds = []
         
         cat = Table.read(self.config.catalogue_path, format=self.config.table_format)
-        
         
         if adjusted:
             light_curve_dir = self.config.adjusted_curve_dir
@@ -151,6 +190,7 @@ class Cataloguer:
             light_curve_dir = self.config.light_curve_dir
             print("[Cataloguer] Using non-adjusted light curves")
     
+
         #for each image file in the light curve directory 
         for file in os.listdir(light_curve_dir):
             if file[:len(self.config.image_prefix)] == self.config.image_prefix:
@@ -183,47 +223,69 @@ class Cataloguer:
         a = [self.means, self.stds, self.id_map]
         #sort results by decreasing variability 
         Utilities.quicksort(a, True)
+
+        ## TODO: Do something with this array
     
 
 
 
-    # TODO: Plot title
-    def plot_means_and_stds(self):
+    def plot_means_and_stds(self, show=False):
+        """
+        Plot the means and standard deviations of all light curves generated.
+
+        Parameters
+        ----------
+
+        show: bool, optional. Show plot to user.
+        """
+
         plt.scatter(self.means, self.stds, marker='.')
         plt.scatter(self.var_means, self.var_stds, marker='.', color='red')
-        plt.xlabel("mean")
-        plt.ylabel("standard deviation")
-        plt.xlim(80, 0)
-        
+        plt.xlabel("Mean [counts]")
+        plt.ylabel("Standard deviation [counts]")
+        plt.title("Mean against standard deviation for each source in catalogue {}"
+                .format(self.config.image_prefix))
+
         #ensure plot y axis starts from 0
+        plt.xlim(80, 0)
         plt.gca().set_ylim(bottom=0)
-        plt.show()
+        
+
+        # Save image to file
+        fname = "{}_mean_std{}".format(self.config.image_prefix, self.config.plot_file_extension)
+        path = os.path.join(self.config.output_dir, fname)
+        plt.savefig(path)
+
+        if show:
+            plt.show()
+
         plt.close()
     
 
 
-    # TODO:
-    #finds which stars are variable by comparing their standard deviations
-    #and means to those of the surrounding stars in the mean-std plot
-    #I think a better method should be implemented
+    # TODO: I think a better method should be implemented
     def is_variable(self, index):
+        """
+        Finds which stars are variable by comparing their standard deviations
+        and means to those of the surrounding stars in the mean-std plot.
+
+        Parameters
+        ----------
+
+        index: 
+
+        """
         
-        #number of stars in either direction to compare to
-        check_radius = 10
-        
-        #threshold for being defined as variable
-        variability = 2
-    
         total = 0
         
         #ensures only checks for surrounding stars where they exist
         #(no indexing errors)
-        llim = index - check_radius
+        llim = index - self.config.check_radius
         
         if llim < 0:
             llim = 0
         
-        ulim = index + check_radius + 1
+        ulim = index + self.config.check_radius + 1
         
         if ulim > len(self.means):
             ulim = len(self.means)
@@ -237,7 +299,7 @@ class Cataloguer:
         
         #if this star's std is much higher than the surrounding average
         #it is a variable star
-        if self.stds[index] > avg * (1 + variability):
+        if self.stds[index] > avg * (1 + self.config.variability_threshold):
             
             self.var_means.append(self.means[index])
             self.var_stds.append(self.stds[index])
@@ -247,40 +309,42 @@ class Cataloguer:
         
         
             
-## TODO: Remove?
-#    #print plots of all variable stars in dataset             
-#    def get_variables(self):
-#        
-#        t = 0
-#        
-#        ff = FluxFinder.FluxFinder("/Users/Thomas/Documents/Thomas_test/", "l198", True, 7, 50)
-#    
-#        for i in range(len(self.means)):
-#            if self.is_variable(i):
-#                t+= 1
-#                #print(self.id_map[i])
-#                ff.plot_light_curve(self.id_map[i], None, True)
+    ## TODO:Improve this
+    def show_variables(self, ff):
+        """
+        Print plots of all variable stars in database
+
+        Parameters
+        ----------
+
+        ff: FluxFinder
+        """
+        
+        for i in range(len(self.means)):
+            if self.is_variable(i):
+                ff.plot_light_curve(self.id_map[i], None, True)
         
 
 
-    ## TODO: Magic numbers
-    #find ids of stars with high brightness to produce average light curve.
-    #the average light curve is subtracted from each printed light curve to 
-    #reduce bias
+    ## TODO: Magic numbers, make this more config friendly
     def get_ids_for_avg(self):
+        """
+        Find IDs of stars with high brightness to produce average light curve.
+        The average light curve is subtracted from each printed light curve to reduce bias
+        """
         print("[DEBUG] Calling `get_ids_for_avg` in Cataloguer")
         
         ids = []
         
         for i in range(len(self.means)):
-            #if self.means[i] > 50 and self.stds[i] < 0.04:
-            #if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
             if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
        
                 fname = self.config.source_format_str.format(self.id_map[i])
                 light_curve_path = os.path.join(self.config.light_curve_dir, fname)
                 t = Table.read(light_curve_path, format=self.config.table_format)
                 
+                # Add it if we have all time points
+                # TODO: Add a >= 0.8* n?
                 if len(t['time']) == self.config.set_size * self.config.n_sets:
                     ids.append(self.id_map[i])
     
@@ -289,8 +353,23 @@ class Cataloguer:
         
 
 
-    # TODO: Docs
+    ## TODO: Add threshold and FWHM and make config variables
     def get_wcs_header(self, file):
+        """
+        Get World Coordinate System header.
+        [Astroquery docs.](https://astroquery.readthedocs.io/en/latest/astrometry_net/astrometry_net.html)
+
+        Parameters
+        ----------
+        file: string
+            File to send to astrometry.net
+
+        Returns
+        -------
+        WCS
+            FITS world coordinate system
+        """
+
         ast = AstrometryNet()
         ast.TIMEOUT = 1200
         ast.api_key = self.config.api_key
@@ -298,15 +377,16 @@ class Cataloguer:
     
         print("[Astrometry] Starting job")
         try:
-            wcs = ast.solve_from_image(file, solve_timeout = 1200)
+            ## Solve on local machine
+            wcs = ast.solve_from_image(file, force_image_upload=False)
         except:
+            print("[Astrometry] Error: WCS failed")
+            print("............ WCS returned: '{}'".format(wcs))
             wcs = None
-            print("[Astrometry] Error: No WCS found")
         
-        print('[Astrometry] Finished job')
-        if not wcs:
-            print('[Astrometry] Error: Job failed')
+        print("\n[Astrometry] Finished job")
             
+        ## TODO: Gives warning with no image data
         return WCS(header=wcs)
             
 
@@ -314,9 +394,20 @@ class Cataloguer:
 ## End of class
 
 
-## TODO: Magic numbers
-#catalogue all sources that meet the thresholds in the image
+## TODO: Magic numbers, make configs
 def find_stars(image_data, threshold):
+    """
+    Catalogue all sources that meet the thresholds in the image.
+
+    Parameters
+    ----------
+    image_data: fits image data
+        Image data to find stars in.
+
+    threshold: float
+        Number of standard deviations above which is a star.
+
+    """
     
     #get mean median and standard deviation of the image data
     mean, median, std = sigma_clipped_stats(image_data, sigma=3.0, maxiters=5)  

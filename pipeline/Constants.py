@@ -29,6 +29,7 @@ class Config:
 
             fits_extension      = ".fit",
             standard_file_extension = ".txt",
+            plot_file_extension = ".jpg",
 
             line_ending         = "\n",
             identifier          = "id",
