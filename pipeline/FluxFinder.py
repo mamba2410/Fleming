@@ -30,20 +30,25 @@ class FluxFinder:
     
     
     def __init__(self, config):
+        """
+        Initialises class and reads shifts and catalogue from files.
+        """
+
         self.config = config
         
-        fname = "{}{}{}".format(
-                config.catalogue_prefix, config.image_prefix, config.standard_file_extension)
-        table_path = os.path.join(config.workspace_dir, fname)
+        self.catalogue = Table.read(self.config.catalogue_path, format=config.table_format)
 
-        self.catalogue = Table.read(table_path, format=config.table_format)
+        t = Table.read(self.config.shift_path, format=self.config.table_format)
+        self.x_shifts = t['xshifts']
+        self.y_shifts = t['yshifts']
 
-        self.get_shifts()
         
 
 
-    #find the fluxes of each star in each image
     def find_all_fluxes(self):
+        """
+        Find the fluxes of each star in each image
+        """
         
         #iterate over each image
         for s in range(1, self.config.n_sets+1):
@@ -51,22 +56,23 @@ class FluxFinder:
                 print("[FluxFinder] Finding fluxes for image: set {:1}; image {:03}".format(s, i))
                 self.find_fluxes(s, i)
                 
-            
-            
-    #read the shifts file
-    def get_shifts(self):
-        
-        #read shifts in as table
-        t = Table.read(self.config.shift_path, format=self.config.table_format)
-        
-        self.x_shifts = t['xshifts']
-        self.y_shifts = t['yshifts']
-        
     
 
-    ## Requires has_sets=True
-    #get the total shift between the specified image and the first image
     def get_total_shift(self, set_number=0, image_number=0):
+        """
+        Get the total shift between the specified image and the first image.
+        Requires `has_sets=True`
+
+        Parameters
+        ----------
+
+        set_number: int
+            Set of the image
+
+        image_number: int
+            Number of image in set
+
+        """
     
         #file is just one long list of shifts, with a shift associated with 
         #each image - below is the expression required
@@ -82,8 +88,20 @@ class FluxFinder:
     
 
     ## TODO: Magic numbers
-    #find the fluxes of all stars ina given image
     def find_fluxes(self, set_number=0, image_number=0):
+        """
+        Find the fluxes of all stars in a given image
+
+        Parameters
+        ----------
+
+        set_number: int
+            Set of the image
+
+        image_number: int
+            Number of image in set
+
+        """
 
         #get total shift from first image to this one
         x_shift, y_shift = self.get_total_shift(set_number=set_number, image_number=image_number)
@@ -99,15 +117,11 @@ class FluxFinder:
             positions.append((x[i], y[i]))
             
         
-        # Shape and size of aperture object
-        ## Magic number
-        apertures = CircularAperture(positions, r=9) 
-        
-        image_data = self.get_image(set_number, image_number)[0].data
+        image_data = Utilities.get_image(self.config, set_number, image_number)[0].data
                 
         # Local background subtraction
 
-        ## Magic numbers
+        ## TODO: Magic number, use the config ones
         # Define size of background aperture
         annulus_apertures = CircularAnnulus(positions, r_in=10, r_out=15)
         apertures = CircularAperture(positions, r=9)
@@ -157,6 +171,7 @@ class FluxFinder:
  
             xypos = (x, y)
 
+            ## TODO: Magic number
             #check that largest aperture does not exceed the boundaries of the image
             if Utilities.is_within_boundaries(x, y, len(image_data[0]), len(image_data), 15):
                 annulus = CircularAnnulus(xypos, r_in=self.config.inner_radius, r_out=self.config.outer_radius)
@@ -181,29 +196,6 @@ class FluxFinder:
 
 
     
-    ## TODO: Throw this in `Utilities.py`
-    def get_image(self, set_number=0, image_number=0):
-        if set_number > self.config.n_sets:
-            print("[FluxFinder] Set index too large: {}".format(set_number))
-            exit()
-        elif image_number > self.config.set_size:
-            print("[FluxFinder] Image index too large: {}".format(image_number))
-            exit()
-
-        
-        #build path to image 
-        if self.config.has_sets:
-            image_name = self.config.image_format_str.format(set_number, image_number)
-        else:
-            image_name = self.config.image_format_str.format(set_number, image_number)
-        
-        data_path = os.path.join(self.config.image_dir, image_name)
-            
-        #read in image data
-        return fits.open(data_path, ext=0)
-        
-
-
 
     ## TODO: Closer look
     ## TODO: Breaks if no sets
@@ -284,8 +276,10 @@ class FluxFinder:
     
     
     
-    #find id of a star from catalogue 2 in catalogue 1
     def map_id(self, id2, cat1, cat2, shifts, set_number):
+        """
+        Find ID of a star from catalogue 2 in catalogue 1
+        """
         
         x_shift = 0
         y_shift = 0
@@ -315,9 +309,24 @@ class FluxFinder:
         
         
         
-    ## TODO: Plot titles
-    #plot light curve of star with the given id (from catalogue)
     def plot_light_curve(self, source_id, path=None, adjusted=False):
+        """
+        Plot light curve of star with the given ID from catalogue
+
+        Parameters
+        ----------
+
+        source_id: int
+            ID of the source to plot light curve for.
+            Plots average light curve if `None`
+
+        path: string, optional
+            Path to save the image to
+
+        adjusted: bool
+            Has the lighth curve been divided by the average flux?
+
+        """
         print("[FluxFinder] Plotting light curve for source {}".format(source_id))
         
         if path == None:
@@ -332,6 +341,7 @@ class FluxFinder:
         times = table['time']
         fluxes = table['counts']
         
+
         mean = Utilities.mean(fluxes)
         
         for i in range(len(fluxes)):
@@ -340,11 +350,14 @@ class FluxFinder:
         minimum = min(fluxes)
         maximum = max(fluxes)
     
-        plt.figure(figsize = (12, 8))
+        ## TODO: Multiple axes, seconds and minutes?
+        #plt.figure(figsize = (12, 8))
         plt.scatter(times, fluxes, s=5, marker = 'x');
-        plt.xlabel("time (s)")
-        plt.ylabel("counts/mean")
+        plt.xlabel("Time [seconds]")
+        plt.ylabel("Relative flux [counts/mean]")
         plt.ylim(0.9 * minimum, maximum * 1.1)
+        plt.title("Light curve for source {:04} (adjusted={})"
+                .format(source_id, adjusted))
         
         if source_id == None:
             fname = "LC_{}_avg.jpg".format(self.config.image_prefix)
@@ -362,10 +375,18 @@ class FluxFinder:
         
 
     
-    #makes an average light curve with the brightest stars to subtract noise
-    #from the resulting curves
+    ## TODO: Duplicate somewhere else
     #use median
     def make_avg_curve(self, ids):
+        """
+        Makes an average light curve with the brightest stars to subtract noise
+        from the resulting curves
+
+        Parameters
+        ----------
+        ids: [int]
+            IDs of sources to take average of
+        """
         print("[DEBUG] Calling `make_avg_curve` in FluxFinder")
                 
         #iterate through each star in the given list
@@ -408,8 +429,14 @@ class FluxFinder:
 
 
 
-    #divide all light curves by the average light curve. Removes noise
     def divide_by_average(self):
+        """
+        Divides all light curves by the average light curve to remove noise.
+        Also removes global effects of the field that vary over time.
+
+        Creates an 'adjusted' light curve.
+
+        """
         print("[DEBUG] Calling `divide_by_average` in FluxFinder")
                     
         #for all files
@@ -446,7 +473,20 @@ class FluxFinder:
 
 
 
-    def get_thumbnail(self, image_n, x, y, size, add_shift):
+    ## TODO: Use set_number and image_number
+    def get_thumbnail(self, image_n, x, y, size, add_shift=True):
+        """
+        Get a thumbnail of a source at its brightest and dimmest images.
+
+        Parameters
+        ----------
+
+        image_n: int
+            Total image number, accumulated across sets
+        size: int
+            Radius of box to select around center.
+
+        """
         
         n = image_n % self.config.set_size
         
@@ -462,7 +502,7 @@ class FluxFinder:
             y_shift = 0
         
         self.has_sets = True
-        image_file = self.get_image(set_number=set_number, image_number=n)
+        image_file = Utilities.get_image(self.config, set_number=set_number, image_number=n)
         
         image = image_file[0].data
         

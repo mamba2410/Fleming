@@ -4,6 +4,9 @@ import os
 from astropy.io import fits
 
 
+## ==================================
+## TODO: Make class or pass in config
+
 #format a number i into a string of length 3
 #example: 1 becomes 001, 54 becomes 054 etc
 def format_index(i):
@@ -31,6 +34,23 @@ def equals(a, b, fraction):
     if a * (1+fraction) > b and a * (1-fraction) < b:
         return True
     return False
+
+
+
+def get_image(config, set_number=0, image_number=0):
+    
+    #build path to image 
+    if config.has_sets:
+        image_name = config.image_format_str.format(set_number, image_number)
+    else:
+        image_name = config.image_format_str.format(set_number, image_number)
+    
+    data_path = os.path.join(config.image_dir, image_name)
+        
+    #read in image data
+    return fits.open(data_path, ext=0)
+
+
 
 #standard deviation of items in a list
 def standard_deviation(a):
