@@ -11,7 +11,6 @@ from astropy.visualization import (ZScaleInterval, LinearStretch,
 
 class DataAnalyser:
     
-    
     config = None
     means = []
     stds = []
@@ -30,6 +29,17 @@ class DataAnalyser:
         
     #plot the means and standard deviations of all light curves generated
     def get_means_and_stds(self, adjusted=False):
+        """
+        Plot the means and standard deviations of all light curves generated
+
+        Loops over all sources, removes cosmics if adjusted.
+
+        Parameters
+        ----------
+
+        adjusted: bool, optional
+            Has light curve been divided by average?
+        """
         
         #build path of the directory in which the light curves are stored
         self.means = []
@@ -59,18 +69,13 @@ class DataAnalyser:
                         print("[DataAnalyser] Removed cosmics on id {}", source_id)
                     
                                 
+                ## TODO: Magic number
                 #only plot data point if at least 5 non-zero counts are recorded
                 if len(t['counts']) > self.config.set_size*self.config.n_sets / 3:
                     
-                    
                     mean = Utilities.mean(t['counts'])
-                    
-
-                    
                     std = Utilities.standard_deviation(t['counts'])
-                    
                     value = std/mean
-                                        
                     
                                                        
                     if value > 0 and value < 2: #and mean > 0.02 and mean < 80:
@@ -90,8 +95,17 @@ class DataAnalyser:
         
 
 
-    ## TODO: Plot titles
     def plot_means_and_stds(self, adjusted=False):
+        """
+        Plot means against standard deviations of each source
+
+        Parameters
+        ----------
+
+        adjusted: bool, optional
+            Has light curve been divided by average?
+
+        """
 
         #plt.figure(figsize=(16, 10))
 
@@ -99,17 +113,19 @@ class DataAnalyser:
         plt.scatter(self.var_means, self.var_stds, marker = '.', color = 'red');
         plt.xscale('log')
         plt.yscale('log')
-        plt.xlabel("mean counts")
-        plt.ylabel("standard deviation")
+        plt.xlabel("Mean [counts]")
+        plt.ylabel("Standard deviation [counts]")
         plt.xlim(self.means[len(self.means)-1] * 1.3, self.means[0] * 0.7)
+        plt.title("Mean against standard deviation for all sources in field {}"
+                .format(self.config.image_prefix))
         
         #ensure plot y axis starts from 0
         plt.gca().set_ylim(bottom=1e-9)
         
         if adjusted:
-            fname = "std_dev_mean_adjusted.jpg"
+            fname = "std_dev_mean_adjusted{}".format(self.config.plot_file_extension)
         else:
-            fname = "std_dev_mean.jpg"
+            fname = "std_dev_mean{}".format(self.config.plot_file_extension)
 
         path = os.path.join(self.config.output_dir, fname)
 
@@ -119,11 +135,23 @@ class DataAnalyser:
 
 
 
-    #returns a score determining the variability of the star
+    ## TODO: Merge with `is_variable` in Cataloguer
     def get_variable_score(self, index):
+        """
+        Returns a score determining the variability of the star
+
+        the next part is just the same as the is_variable method
+        in Cataloguer - need to investigate if there is a reason for this
+        Merge both together?
+
+        Parameters
+        ----------
+
+        index: int
+            Index of variable star to check?
+
+        """
         
-        #the next part is just the same as the is_variable method
-        #in Cataloguer - need to investigate if there is a reason for this
        
         values = []
         
@@ -156,10 +184,20 @@ class DataAnalyser:
         
     #seems to serve same function as same fn in cataloguer?
     #looks like this one is the one that is actually used
-    #print plots of all variable stars in dataset, and stores their 
-    #ids, x-y coords and variabilities in a table
     #comments in other
     def get_variables(self, ff, adjusted=False):
+        """
+        Print plots of all variable stars in catalogue, and stores their
+        IDs, xy-coords and variability scores in a table
+
+        Parameters
+        ----------
+
+        ff: FluxFinder
+            FluxFinder object 
+
+        """
+
         print("[DEBUG] Getting variables in DataAnalyser")
         
         t = 0
@@ -192,19 +230,28 @@ class DataAnalyser:
                     self.results_table.add_row([int(id), cat['xcentroid'][row_index], cat['ycentroid'][row_index], variability, 0, 0])
                 #remove False literal here
                 if adjusted:
-                    ff.plot_light_curve(self.id_map[i], None, True)
+                    ff.plot_light_curve(self.id_map[i], adjusted=True)
         
             
     
     ## TODO: Magic numbers
     def create_thumbnails(self, ff, adjusted=False):
+        """
+        Creates images of the brightest and dimmest frames of each source deemed variable
+
+        Parameters
+        ----------
+
+        ff: FluxFinder
+            FluxFinder object used to get a thumbnail slice
+        """
         
-        #light_curve_dir = self.filesdir + self.config.working_directory + self.config.adjusted_curves_subdir
         if adjusted:
             light_curve_dir = self.config.adjusted_curve_dir
         else:
             light_curve_dir = self.config.light_curve_dir
         
+
         for i in range(len(self.results_table['id'])):
 
             fname = self.config.source_format_str.format(int(self.results_table['id'][i]))
@@ -246,8 +293,8 @@ class DataAnalyser:
             bright_norm = ImageNormalize(bright, interval=ZScaleInterval(), stretch=LinearStretch())
             plt.imshow(bright, origin='upper', cmap='gray', norm = bright_norm)
             
-            fname= "thumb_{}_{}{:04}.jpg".format(self.config.image_prefix, self.config.identifier,
-                    self.results_table['id'][i])
+            fname= "thumb_{}_{}{:04}{}".format(self.config.image_prefix, self.config.identifier,
+                    self.results_table['id'][i], self.config.plot_file_extension)
             path = os.path.join(self.config.output_dir, fname)
 
             plt.savefig(path)
@@ -263,6 +310,12 @@ class DataAnalyser:
     #probably from cataloguer
     #comments in other
     def get_ids_for_avg(self):
+        """
+        Find IDs of stars with high brightness to produce average light curve.
+        The average light curve is subtracted from each printed light curve to reduce bias
+
+        """
+
         print("[DEBUG] Calling `get_ids_for_avg` in DataAnalyser")
         
         ids = []
@@ -375,6 +428,16 @@ class DataAnalyser:
 
        
     def remove_cosmics(self, t):
+        """
+        Remove cosmic rays in image
+
+        Parameters
+        ----------
+
+        t: Table
+            Table contaning source information. Counts will be modified
+            
+        """
         
         counts = t['counts']
         cosmic_index = -1

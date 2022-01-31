@@ -263,7 +263,8 @@ class Cataloguer:
     
 
 
-    # TODO: I think a better method should be implemented
+    ## TODO: I think a better method should be implemented
+    ## Merge with `get_variable_score` in DataAnalyser
     def is_variable(self, index):
         """
         Finds which stars are variable by comparing their standard deviations
@@ -371,18 +372,21 @@ class Cataloguer:
         """
 
         ast = AstrometryNet()
-        ast.TIMEOUT = 1200
+        ast.TIMEOUT = self.config.astrometry_timeout
         ast.api_key = self.config.api_key
     
     
         print("[Astrometry] Starting job")
+        wcs = None
         try:
             ## Solve on local machine
-            wcs = ast.solve_from_image(file, force_image_upload=False)
-        except:
-            print("[Astrometry] Error: WCS failed")
-            print("............ WCS returned: '{}'".format(wcs))
-            wcs = None
+            wcs = ast.solve_from_image(
+                    file, 
+                    solve_timeout=self.config.astrometry_timeout,
+                    force_image_upload=False)
+        except Exception as e:
+            print("\n[Astrometry] Error: WCS failed")
+            print("............ Exception: {}".format(e))
         
         print("\n[Astrometry] Finished job")
             

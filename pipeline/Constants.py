@@ -51,6 +51,7 @@ class Config:
             set_size            = 50,
             n_sets              = 7,
 
+            astrometry_timeout  = 1200,
             api_key             = "",
             api_key_file        = "astrometry_api_key.txt"
             ):
@@ -82,6 +83,7 @@ class Config:
 
         self.fits_extension             = fits_extension
         self.standard_file_extension    = standard_file_extension
+        self.plot_file_extension        = plot_file_extension
 
         self.line_ending        = line_ending
         self.identifier         = identifier
@@ -103,6 +105,7 @@ class Config:
         self.set_size           = set_size
         self.n_sets             = n_sets
 
+        self.astrometry_timeout = astrometry_timeout
         self.api_key_file       = api_key_file
         self.api_key            = api_key
 

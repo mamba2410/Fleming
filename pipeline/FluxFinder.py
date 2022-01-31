@@ -356,17 +356,21 @@ class FluxFinder:
         plt.xlabel("Time [seconds]")
         plt.ylabel("Relative flux [counts/mean]")
         plt.ylim(0.9 * minimum, maximum * 1.1)
-        plt.title("Light curve for source {:04} (adjusted={})"
-                .format(source_id, adjusted))
         
         if source_id == None:
             fname = "LC_{}_avg.jpg".format(self.config.image_prefix)
+            plt.title("Light curve for average of sources (adjusted={})"
+                .format(adjusted))
         elif source_id >= 0:
             fname = "LC_{}_{}{:04}.jpg".format(
                 self.config.image_prefix, self.config.identifier, source_id)
+            plt.title("Light curve for source {:04} (adjusted={})"
+                .format(source_id, adjusted))
         else:
             print("[FluxFinder] Error: Cannot plot light curve, source id '{}' invalid"
                     .format(source_id))
+            plt.title("Light curve for unknown source (id {}) (adjusted={})"
+                .format(source_id, adjusted))
             
 
         image_file = os.path.join(self.config.output_dir, fname)
@@ -476,7 +480,7 @@ class FluxFinder:
     ## TODO: Use set_number and image_number
     def get_thumbnail(self, image_n, x, y, size, add_shift=True):
         """
-        Get a thumbnail of a source at its brightest and dimmest images.
+        Get a thumbnail of a source, returns pixel values.
 
         Parameters
         ----------
