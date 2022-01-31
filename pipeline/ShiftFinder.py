@@ -14,9 +14,11 @@ class ShiftFinder:
         self.config = config
 
     
-    # TODO: Quicksort, magic numbers
-    #finds the coordinates of the brightest star in the image
+    # TODO: Quicksort, magic numbers, general improvements
     def get_reference_coordinates(self):
+        """
+        Finds pixel coordinates of brightest star in catalogue
+        """
         
         #reads in catalogue
         t = Table.read(self.config.catalogue_path, format=self.config.table_format)
@@ -53,21 +55,37 @@ class ShiftFinder:
         return x, y
     
 
+    ## TODO: Understand more
     ## TODO: Fit warnings are probably in here
     def find_shift(self, previous_x, previous_y, image_path, size=10):
-
-        # choose how big a box to draw around the star
-        #size = 10  # 10 will make a 20x20 pixel box
+        """
         
-        # open the next image and load it as an array
+        Parameters
+        ----------
+        image_path: string
+            Path to the next image to find shifts.
+        size: int, optional, default=10
+            Radius of box around star. Value=10 makes 20x20 square box.
+
+        Returns
+        -------
+        x_shift: float
+            Shift since last image in x direction.
+        y_shift: float
+            Shift since last image in y direction.
+
+        """
+        
         # TODO: Use get_image from other class
+        # open the next image and load it as an array
         image = fits.open(image_path)
         data_array = image[0].data
         
         # Select just the box around the star
         data_square = data_array[int(previous_y)-size:int(previous_y)+size, int(previous_x)-size:int(previous_x)+size] # note your x,y coords need to be an int
         
-        #get coordinates of the centre of the star in the data square
+        # Get coordinates of the centre of the star in the data square
+        # Fits a 2d Gaussian to data
         x, y = centroid_2dg(data_square)
 
         #calculate shift between previous position and newly calculated
