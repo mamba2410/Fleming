@@ -1,6 +1,7 @@
 from datetime import datetime
 import Constants
 import os
+import parse
 from astropy.io import fits
 
 
@@ -49,6 +50,44 @@ def get_image(config, set_number=0, image_number=0):
         
     #read in image data
     return fits.open(data_path, ext=0)
+
+
+## TODO: breaks if not using sets
+def list_images(config, directory, reduced=False):
+    """
+    List images in directory
+
+    Parameters
+    ==========
+
+    directory: string
+        directory to list
+    prefix: string, optional
+        prefix of files to list
+
+    Returns
+    =======
+
+    Array of strings contaiing image names, as well as set and image number
+
+    """
+
+    
+    image_list = []
+
+    if reduced:
+        fmt = config.image_format_str
+    else:
+        fmt = config.raw_image_format_str
+
+    for f in os.listdir(config.image_dir):
+        res = parse.parse(fmt, f)
+        if res != None:
+            set_number = res.fixed[0]
+            image_number = res.fixed[1]
+            image_list.append((f, set_number, image_number))
+
+    return image_list
 
 
 
