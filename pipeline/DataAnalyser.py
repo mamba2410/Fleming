@@ -238,7 +238,7 @@ class DataAnalyser:
         """
         
 
-        for path, source_id, i in enumerate(Utilities.list_sources(self.config, adjusted)):
+        for i, path, source_id in enumerate(Utilities.list_sources(self.config, adjusted)):
             t = Table.read(path, format=self.config.table_format)
             
             i_dim = 0
