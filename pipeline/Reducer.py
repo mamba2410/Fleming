@@ -13,15 +13,10 @@ import Constants
     
 class Reducer:
     
-    
-    #path to folder which contains the raw images
-    directory = None
-    
-    #name of set of image, for example 'l198' or 'n7129'
-    image_names = None
+    config = None
     
     #filter to use
-    fil = None
+    image_filter = None
         
     #bias file
     bias_frames = []
@@ -35,172 +30,156 @@ class Reducer:
     
     flat_median = None
     
-    #the number of images in a single set
-    set_size = 0
     
-    #the number of sets of images in the directory
-    n_sets = 0
-    
-    
-    #constructor for Reducer class object
-    def __init__(self, dir, filter, image_names, n_bias, n_flatfield):
-        self.directory = dir
-        self.image_names = image_names
-        self.fil = filter
+    def __init__(self, config, image_filter):
+        """
+        Takes Config object and image filter, creates a Reducer object
+        Also gets bias and flat frames
+
+        """
+
+        self.config = config
+        self.image_filter = image_filter
         self.get_bias_and_flatfield()
         
         
     #get the bias and flatfield data files 
     def get_bias_and_flatfield(self):
-        
-        for file in os.listdir(self.directory):
-            
-            if 'bias' in file or 'Bias' in file:
-            
-                self.bias_frames.append(getdata(self.directory + file))
+        """
+        Finds bias and flats in image_dir and populates an internal 
+        array with the image data
 
-            if 'flat' in file or 'Flat' in file:
-                
-                self.flatfield_frames.append(getdata(self.directory + file))
+        """
+
+        for file in os.listdir(self.config.image_dir):
+            
+            if file[:len(self.config.bias_prefix)] == self.config.bias_prefix:
+                self.bias_frames.append(getdata(
+                    os.path.join(self.config.image_dir, file)))
+
+            if file[:len(self.config.flat_prefix)] == self.config.flat_prefix:
+                self.flatfield_frames.append(getdata(
+                    os.path.join(self.config.image_dir, file)))
       
-        print("Found " + str(len(self.bias_frames)) + " bias frames")
-        print("Found " + str(len(self.flatfield_frames)) + " flatfield frames")
+        print("[Reducer] Found {} bias frames".format(len(self.bias_frames)))
+        print("[Reducer] Found {} flatfield frames".format(len(self.flatfield_frames)))
         
     def create_master_bias(self):
-        
+        """
+        Creates a master bias from median of each pixel in bias frames
+        """
+
         self.master_bias = np.median(self.bias_frames)
-        print("Created master bias")
+        print("[Reducer] Created master bias")
     
     def create_master_flat(self):
-        
+        """
+        Creates a master flat from median of each pixel in flat frames.
+        Also finds the median pixel value across all flat frames.
+        """
         self.master_flat = np.median(self.flatfield_frames)
-        
         #get median of flatfield
         self.flat_median = np.median(self.master_flat)
                 
-        print("Created master flatfield")
+        print("[Reducer] Created master flatfield")
         
             
-    #subtract bias and divide by flatfield for all images in the directory 
-    #with a name containing the image_names regex
-    def reduce(self, has_sets):
-        
-        
-        
-        
-        
+
+    def reduce(self, skip_existing=False):
+        """
+        Subtract master bias and divide by master flat for all images in 
+        original image directory
+
+        """
+
         self.create_master_bias()
         self.create_master_flat()
         
-        #new directory within directory containing raw images to store
-        #program output in
-        newdir = self.directory + Constants.working_directory
-        
-        #creates new directory if not already exists
-        if not os.path.exists(newdir):
-            os.mkdir(newdir)
-        
-        #new directory within directory defined above to contain processed 
-        #images
-        newdir = newdir + Constants.image_directory
-        
-        #creates image directory if not already exists
-        if not os.path.exists(newdir):
-            os.mkdir(newdir)
-        
-        #length of image name regex
-        strlen=len(self.image_names)
-        
-        i = 0        
         #loop througheach file in directory 
-        for file in os.listdir(self.directory):
+        for file in os.listdir(self.config.image_dir):
             #if the first strlen characters are the image name regex then
             #this file is an image to be processed
-            if file[:strlen]==self.image_names and Constants.fits_extension in file:
+            #if file[:strlen]==self.image_names and Constants.fits_extension in file:
+            if file[:len(self.config.image_prefix)] == self.config.image_prefix:
+
+                #if raw images are stored in sets
+                if(self.config.has_sets):
+                    
+                    #if has sets, then files are stored with the following 
+                    #suffix format 'name_1_001', 'name_3_020' etc. The 
+                    #following code splits the name string to find the
+                    #set number and image number
+                    
+                    array = file.split("_")
+                    set_number   = int(array[len(array)-2])
+                    image_number = int(array[len(array)-1].split(".")[0])
+                    
+                    ## Throws warning if we have a set size larger than specified in config.
+                    if image_number > self.config.set_size:
+                        print("[Reducer] Warning: Config has set size {}, but found image number {}"
+                                .format(self.config.set_size, image_number))
+
+                    
+                    if set_number > self.config.n_sets:
+                        print("[Reducer] Warning: Config has n_sets {}, but found set number {}"
+                                .format(self.config.n_sets, set_number))
+                                            
+                    fname = self.config.image_format_str.format(set_number, image_number)
+                    reduced_path = os.path.join(self.config.image_dir, fname)
+                
+                    print("[Reducer] Creating reduced image '{}'".format(reduced_path))
+                else:
+
+                    ## If no sets, then assumed file is named
+                    ## <image_prefix>_<image_number>.<extension>
+                    tmp = file.split("_")[1]
+                    tmp = file.split(".")[0]
+                    image_numer = int(tmp)
+
+                    fname = self.config.image_format_str.format(image_number)
+                    reduced_path = os.path.join(self.config.image_dir, fname)
+
+                ## If reduced file already exists and skip_existing=True then skip this 
+                if skip_existing and os.exists(reduced_path):
+                    continue
+
+                path = os.path.join(self.config.image_dir, file)
                 #get image filter value
-                print(file)
-                filter=getval(self.directory+file,'FILTER',ignore_missing_end=True)
+                image_filter=getval(path, 'FILTER',ignore_missing_end=True)
+
                 #if the filter of the image matches the required filter then
-                if filter[:1]==self.fil or filter == self.fil:
-
-
-                    
+                if image_filter[:1]==self.image_filter or image_filter == self.image_filter:
                     #get image data and header
-                    data= getdata(self.directory+file,ignore_missing_end=True) 
+                    data = getdata(path, ignore_missing_end=True) 
                     
-                    Constants.image_width = len(data)
-                    Constants.image_height = len(data[0])
+                    image_height = len(data)
+                    image_width  = len(data[0])
+                    if image_height != self.config.image_height or image_width != self.config.image_width:
+                        print("[Reducer] Error: Image dimensions different to what is given in config:")
+                        print("......... (w,h): Config: ({},{}); image: ({},{})"
+                                .format(self.config.image_width, self.config.image_height,
+                                    image_width, image_height))
                     
+
                     #subtract bias from image
                     data = data - self.master_bias
                     
                     #divide image by flatfield divided by median of flatfield
                     data = data / (self.master_flat / self.flat_median)
                     
-                    head=getheader(self.directory+file,ignore_missing_end=True)
+                    head=getheader(path, ignore_missing_end=True)
                     
                     
-                    #build filepath of processed image
-                    filepath = newdir + Constants.reduced_prefix + self.image_names
-                    #if raw images are stored in sets
-                    if(has_sets):
                         
-                        #if has sets, then files are stored with the following 
-                        #suffix format 'name_1_001', 'name_3_020' etc. The 
-                        #following code splits the name string to find the
-                        #set number and image number
-                        
-                        array = file.split("_")
-                        set = int(array[len(array)-2])
-                        i = int(array[len(array)-1].split(".")[0])
-                        
-                        #finds the maximum set size and image number 
-                        #encountered, so the program in subsequent steps
-                        #knows to iterate from 1 to n_sets and 1 to set_size
-                        #when processing the image data
-                        
-                        if i > self.set_size:
-                            self.set_size = i
-                        
-                        if set > self.n_sets:
-                            self.n_sets = set
-                                                
-                        filepath += "_" + str(set) + "_" + Utilities.format_index(i)
                     
-                    else:
+                    ## ?? Not sure why this is here
+                    ## TODO: Magic numbers
+                    if False and self.config.has_sets:
                         
-                        i+=1
+                        x = int((image_width*0.1) + ((set_number*self.config.set_size + image_number)/400)*(0.7*width))
+                        y = int(image_height/2)
                         
-                        #length of image number 
-                        n_length = len(str(i))
-                        
-                        #format image number string to format '001', '025', '312'
-                        #etc 
-                        
-                        for j in range(3-n_length):
-                            filepath += "0"
-                        
-                        filepath += i
-                    
-                    filepath += Constants.fits_extension
-                    
-# =============================================================================
-#                     if set == 1 and i == 1:
-#                         
-#                         pf = PositionFinder.PositionFinder(newdir, hdul)
-#                         pf.getWCS()
-#                         return
-# =============================================================================
-                    
-                    if True:
-                        
-                        width = len(data)
-                        height = len(data[0])
-                        
-                        x = int((width*0.1) + ((set*50 + i)/400)*(0.7*width))
-                        y = int(height/2)
-                        
-                        print(x, y, set, i)
+                        print(x, y, set_number, image_number)
                         for k in range(-3, 3, 1):
                             for l in range(-3, 3, 1):
                                 
@@ -210,17 +189,11 @@ class Reducer:
                                     
                                 data[x + k][y + l] = 4.2/n * 8000
                         
-                        #export processed image to file 
+                    #export processed image to file 
                     hdu = PrimaryHDU(data, head)
                     hdul = HDUList([hdu], None)
-                    hdul.writeto(filepath, overwrite=True)
+                    hdul.writeto(reduced_path, overwrite=True)
 
                     
-    #get set size and number of sets for use later in program
-    def get_set_info(self):
-        return self.set_size, self.n_sets
-                    
-            
-        
     
-    
+

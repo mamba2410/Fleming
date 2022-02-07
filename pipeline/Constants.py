@@ -24,9 +24,11 @@ class Config:
             moving_obj_fname    = "moving_obj",
             astrometry_job_fname = "astrometryjob",
 
-            reduced_prefix      = "",
+            reduced_prefix      = "r_",
             catalogue_prefix    = "catalogue_",
             flux_prefix         = "flux_",
+            bias_prefix         = "bias",
+            flat_prefix         = "dflat",
 
             fits_extension      = ".fit",
             standard_file_extension = ".txt",
@@ -46,7 +48,7 @@ class Config:
             moving_obj_check_image  = 30,
 
             image_width         = 2432,
-            image_height        = 1600,
+            image_height        = 1616,
             image_prefix        = "l137_0",
             has_sets            = True,
             set_size            = 50,
@@ -84,6 +86,8 @@ class Config:
         self.reduced_prefix         = reduced_prefix
         self.catalogue_prefix       = catalogue_prefix
         self.flux_prefix            = flux_prefix
+        self.bias_prefix            = bias_prefix
+        self.flat_prefix            = flat_prefix
 
         self.fits_extension             = fits_extension
         self.standard_file_extension    = standard_file_extension
