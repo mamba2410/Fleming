@@ -53,7 +53,7 @@ def get_image(config, set_number=0, image_number=0):
 
 
 ## TODO: breaks if not using sets
-def list_images(config, directory, reduced=False):
+def list_images(config, directory, reduced=True):
     """
     List images in directory
 
@@ -73,7 +73,12 @@ def list_images(config, directory, reduced=False):
     """
 
     
+    print("[DEBUG] listing dirs in {}".format(directory))
     image_list = []
+
+    if not config.has_sets:
+        print("[Utilities] list_images currently does not support has_sets=False, sorry")
+        return image_list
 
     if reduced:
         fmt = config.image_format_str
@@ -83,13 +88,39 @@ def list_images(config, directory, reduced=False):
     for f in os.listdir(config.image_dir):
         res = parse.parse(fmt, f)
         if res != None:
-            set_number = res.fixed[0]
-            image_number = res.fixed[1]
+            set_number = int(res.fixed[0])
+            image_number = int(res.fixed[1])
             image_list.append((f, set_number, image_number))
 
     return image_list
 
 
+## TODO: has_sets=False
+def loop_images(config, reduced=True):
+    """
+    Loop over all images in image dir
+    Assumes the correct n_sets and set_size
+
+    """
+
+    print("[DEBUG] looping images")
+    image_list = []
+
+    if not config.has_sets:
+        print("[Utilities] loop_images currently does not support has_sets=False, sorry")
+        return image_list
+
+    if reduced:
+        fmt = self.config.image_format_str
+    else:
+        fmt = self.config.raw_image_format_str
+
+    for s in range(1, config.n_sets+1):
+        for i in range(1, config.set_size+1):
+            fname = fmt.format(s, i)
+            image_list.append((fname, s, i))
+
+    return image_list
 
 #standard deviation of items in a list
 def standard_deviation(a):
