@@ -10,6 +10,7 @@ class Config:
             pipeline_root       = ".",
             workspace_subdir    = "workspace",
             image_subdir        = "../images",
+            image_dir           = "",
             flux_subdir         = "fluxes",
             light_curve_subdir  = "light_curves",
             adjusted_curve_subdir = "adjusted_light_curves",
@@ -58,7 +59,10 @@ class Config:
 
         self.pipeline_root          = pipeline_root
         self.workspace_dir          = os.path.join(pipeline_root, workspace_subdir)
-        self.image_dir              = os.path.join(self.workspace_dir, image_subdir)
+        if len(image_dir) > 0:
+            self.image_dir = image_dir
+        else:
+            self.image_dir              = os.path.join(self.workspace_dir, image_subdir)
         self.flux_dir               = os.path.join(self.workspace_dir, flux_subdir)
         self.light_curve_dir        = os.path.join(self.workspace_dir, light_curve_subdir)
         self.adjusted_curve_dir     = os.path.join(self.workspace_dir, adjusted_curve_subdir)
