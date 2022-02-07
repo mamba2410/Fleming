@@ -61,7 +61,6 @@ class Cataloguer:
         self.remove_stars(sources, image_data)
         self.n_sources = len(sources['id'])
 
-
         ## Write all sources to a file
         Utilities.make_reg_file(self.config.workspace_dir, self.config.image_prefix, sources)
         
@@ -73,22 +72,19 @@ class Cataloguer:
         #write the catalogue to the catalogue file
         sources.write(self.config.catalogue_path, format=self.config.table_format, overwrite=True)
         
-        ## Clear time tile
+        ## Clear time file
         if(os.path.exists(self.config.time_path)):
             open(self.config.time_path, "w").close()
 
     
         #loop through all images within each set 
-        for s in range(1, self.config.n_sets + 1):
-            for i in range(1, self.config.set_size + 1):
+        for f, _s, _i in Utilities.loop_images(self.config):
                 
                 #build image filepath 
                 if self.config.has_sets:
-                    image_file = os.path.join(self.config.image_dir,
-                            self.config.image_format_str.format(s, i))
+                    image_file = os.path.join(self.config.image_dir, f)
                 else:
-                    image_file = os.path.join(self.config.image_dir,
-                            self.config.image_format_str.format(i))
+                    image_file = os.path.join(self.config.image_dir, f)
                 
                 #store the time which the current image was taken
                 self.add_times(fits.getheader(image_file))
@@ -192,32 +188,29 @@ class Cataloguer:
     
 
         #for each image file in the light curve directory 
-        for file in os.listdir(light_curve_dir):
-            if file[:len(self.config.image_prefix)] == self.config.image_prefix:
-
-                #read light curve data from file
-                t = Table.read(os.path.join(light_curve_dir, file), format=self.config.table_format)
-
-                                
-                ## TODO: Magic number
-                #only plot data point if at least 5 non-zero counts are recorded
-                if len(t['counts']) > 100:
-                    mean = Utilities.mean(t['counts'])
-                    std = Utilities.standard_deviation(t['counts'])
-                    value = std/mean
-                    
-                    image_id = file.split(self.config.identifier)[1].split(".")[0]
-                    
-                    # ??? Magic numbers
-                    if value > 0 and value < 2 and mean > 0.02 and mean < 80:
-                        self.stds.append(value)
-                        self.means.append(mean)
+        for path, source_id in Utilities.list_sources(self.config):
+    
+            #read light curve data from file
+            t = Table.read(path, format=self.config.table_format)
+            
+                            
+            ## TODO: Magic number
+            #only plot data point if at least 5 non-zero counts are recorded
+            if len(t['counts']) > 100:
+                mean = Utilities.mean(t['counts'])
+                std = Utilities.standard_deviation(t['counts'])
+                value = std/mean
                 
-                        self.id_map.append(str(image_id))
-                
-                    #if Utilities.is_above_line(std, mean, 17, 0, 0.05) and mean > 50:
-                    #if value < 0.01 and mean > 3:
-                        #print(file.split("id")[1].split(".")[0],Utilities.mean(t['counts']))
+                # ??? Magic numbers
+                if value > 0 and value < 2 and mean > 0.02 and mean < 80:
+                    self.stds.append(value)
+                    self.means.append(mean)
+            
+                    self.id_map.append(str(source_id))
+            
+                #if Utilities.is_above_line(std, mean, 17, 0, 0.05) and mean > 50:
+                #if value < 0.01 and mean > 3:
+                    #print(file.split("id")[1].split(".")[0],Utilities.mean(t['counts']))
         
         #compile results into single array
         a = [self.means, self.stds, self.id_map]

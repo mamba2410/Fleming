@@ -51,10 +51,9 @@ class FluxFinder:
         """
         
         #iterate over each image
-        for s in range(1, self.config.n_sets+1):
-            for i in range(1, self.config.set_size+1):
-                print("[FluxFinder] Finding fluxes for image: set {:1}; image {:03}".format(s, i))
-                self.find_fluxes(s, i)
+        for _, s, i in Utilities.loop_images(self.config):
+            print("[FluxFinder] Finding fluxes for image: set {:1}; image {:03}".format(s, i))
+            self.find_fluxes(s, i)
                 
     
 
@@ -209,9 +208,8 @@ class FluxFinder:
         light_curves = []
           
         #iterate over each image
-        for s in range(1, self.config.n_sets+1):
-            for i in range(1, self.config.set_size+1):
                 
+        for _, s, i in Utilities.loop_images(self.config):
                 #print("Finding fluxes in image {}".format(str((set-1)*self.set_size + i)))
                 print("[FluxFinder] Making light curve for image: set {:1}; image: {:03}".format(s, i))
                 
@@ -309,7 +307,7 @@ class FluxFinder:
         
         
         
-    def plot_light_curve(self, source_id, path=None, adjusted=False, show=False):
+    def plot_light_curve(self, source_id=None, path=None, adjusted=False, show=False):
         """
         Plot light curve of star with the given ID from catalogue
 
@@ -399,6 +397,7 @@ class FluxFinder:
         for i in range(len(ids)):
             fname = self.config.source_format_str.format(ids[i])
             path = os.path.join(self.config.light_curve_dir, fname)
+            print("source_id: {}".format(source_id))
             
             #get the light curve for star i
             t = Table.read(path, format=self.config.table_format)
@@ -446,34 +445,29 @@ class FluxFinder:
         print("[DEBUG] Calling `divide_by_average` in FluxFinder")
                     
         #for all files
-        for file in os.listdir(self.config.light_curve_dir):
-            if file[:len(self.config.image_prefix)] == self.config.image_prefix:
+        for path, source_id in Utilities.list_sources(self.config, adjusted=False):
+            t = Table.read(path, format=self.config.table_format)
+                                            
+            this_fluxes = t['counts']
+            this_times = t['time']
+            
+            for i in range(len(this_fluxes)):
+                time = this_times[i]
                 
-                path = os.path.join(self.config.light_curve_dir, file)
-                t = Table.read(path, format=self.config.table_format)
-                                                
-                this_fluxes = t['counts']
-                this_times = t['time']
-                
-                source_id = file.split(self.config.identifier)[1].split(".")[0]
-                
-                for i in range(len(this_fluxes)):
-                    time = this_times[i]
-                    
-                    #divide each flux measurement by the average flux measurement
-                    #at its respective point in time
-                    for j in range(len(self.avg_fluxes)):
-                        if time == self.times[j]:
-                            this_fluxes[i] = this_fluxes[i] / self.avg_fluxes[j]
-                            #print(this_fluxes[i])
-                
-                #export adjusted light curve
-                light_curve = Table([this_times, this_fluxes], names = ('time','counts'))
+                #divide each flux measurement by the average flux measurement
+                #at its respective point in time
+                for j in range(len(self.avg_fluxes)):
+                    if time == self.times[j]:
+                        this_fluxes[i] = this_fluxes[i] / self.avg_fluxes[j]
+                        #print(this_fluxes[i])
+            
+            #export adjusted light curve
+            light_curve = Table([this_times, this_fluxes], names = ('time','counts'))
 
-                fname = self.config.source_format_str.format(source_id)
-                out_path = os.path.join(self.config.adjusted_curve_dir, fname)
+            fname = self.config.source_format_str.format(source_id)
+            out_path = os.path.join(self.config.adjusted_curve_dir, fname)
 
-                light_curve.write(out_path, format=self.config.table_format, overwrite=True)
+            light_curve.write(out_path, format=self.config.table_format, overwrite=True)
 
         
 

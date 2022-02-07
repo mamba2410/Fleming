@@ -55,15 +55,15 @@ def get_image(config, set_number=0, image_number=0):
 ## TODO: breaks if not using sets
 def list_images(config, directory, reduced=True):
     """
-    List images in directory
+    List image files in directory, as well as associated set and image number.
 
     Parameters
     ==========
 
     directory: string
         directory to list
-    prefix: string, optional
-        prefix of files to list
+    reduces: bool, optional
+        should include the reduced prefix?
 
     Returns
     =======
@@ -98,8 +98,9 @@ def list_images(config, directory, reduced=True):
 ## TODO: has_sets=False
 def loop_images(config, reduced=True):
     """
-    Loop over all images in image dir
-    Assumes the correct n_sets and set_size
+    Return array of image names, set number and image number of each image.
+    Assumes the correct n_sets and set_size.
+    Should be faster than list_images()
 
     """
 
@@ -111,9 +112,9 @@ def loop_images(config, reduced=True):
         return image_list
 
     if reduced:
-        fmt = self.config.image_format_str
+        fmt = config.image_format_str
     else:
-        fmt = self.config.raw_image_format_str
+        fmt = config.raw_image_format_str
 
     for s in range(1, config.n_sets+1):
         for i in range(1, config.set_size+1):
@@ -121,6 +122,50 @@ def loop_images(config, reduced=True):
             image_list.append((fname, s, i))
 
     return image_list
+
+
+def list_sources(config, directory=None, adjusted=False):
+    """
+    List list curve (source) files files in directory, as well as associated id number
+
+    Parameters
+    ==========
+
+    directory: string, optional
+        directory to list for light curves
+    adjusted: bool, optional
+        has the light curve been adjusted?
+
+    Returns
+    =======
+
+    Array of strings containing file paths, as well as id number
+
+    """
+
+    
+    if directory != None:
+        print("[DEBUG] listing light curves in {}".format(directory))
+        d = directory
+    else:
+        if adjusted:
+            print("[DEBUG] listing adjusted sources")
+            d = config.adjusted_light_curve_dir
+        else:
+            print("[DEBUG] listing sources")
+            d = config.light_curve_dir
+
+    source_list = []
+
+    for f in os.listdir(d):
+        res = parse.parse(config.source_format_str, f)
+        if res != None:
+            id_number = int(res.fixed[0])
+            path = os.path.join(d, f)
+            source_list.append((path, id_number))
+
+    return source_list
+
 
 #standard deviation of items in a list
 def standard_deviation(a):

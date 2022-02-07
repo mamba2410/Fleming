@@ -48,46 +48,37 @@ class DataAnalyser:
         
         #cat = Table.read(self.filesdir + self.config.working_directory + self.config.catalogue_prefix + self.image_names + self.config.standard_file_extension, format=self.config.table_format)
         
-        
-        if adjusted:
-            light_curve_dir = self.config.adjusted_curve_dir
-        else:
-            light_curve_dir = self.config.light_curve_dir
-
         #for each file in the light curve directory 
-        for file in os.listdir(light_curve_dir):
-            if file[:len(self.config.image_prefix)] == self.config.image_prefix:
+        for path, source_id in Utilities.list_sources(self.config, adjusted=adjusted):
+            
+            #read light curve data from file
+            t = Table.read(path, format=self.config.table_format)
+            print(len(t['counts']))
+            
+            if adjusted:
+                if self.remove_cosmics(t):
+                    print("[DataAnalyser] Removed cosmics on id {}", source_id)
                 
-                #read light curve data from file
-                path = os.path.join(light_curve_dir, file)
-                t = Table.read(path, format=self.config.table_format)
+                            
+            ## TODO: Magic number
+            #only plot data point if at least 5 non-zero counts are recorded
+            if len(t['counts']) > self.config.set_size*self.config.n_sets / 3:
                 
-                source_id = file.split(self.config.identifier)[1].split(".")[0]
-
-                if adjusted:
-                    if self.remove_cosmics(t):
-                        print("[DataAnalyser] Removed cosmics on id {}", source_id)
+                mean = Utilities.mean(t['counts'])
+                std = Utilities.standard_deviation(t['counts'])
+                value = std/mean
+                
+                                                   
+                if value > 0 and value < 2: #and mean > 0.02 and mean < 80:
                     
-                                
-                ## TODO: Magic number
-                #only plot data point if at least 5 non-zero counts are recorded
-                if len(t['counts']) > self.config.set_size*self.config.n_sets / 3:
-                    
-                    mean = Utilities.mean(t['counts'])
-                    std = Utilities.standard_deviation(t['counts'])
-                    value = std/mean
-                    
-                                                       
-                    if value > 0 and value < 2: #and mean > 0.02 and mean < 80:
-                        
-                        self.stds.append(value)
-                        self.means.append(mean)
-                
-                        self.id_map.append(int(source_id))
-                
-                    #if Utilities.is_above_line(std, mean, 17, 0, 0.05) and mean > 50:
-                    #if value < 0.01 and mean > 3:
-                        #print(file.split("id")[1].split(".")[0],Utilities.mean(t['counts']))
+                    self.stds.append(value)
+                    self.means.append(mean)
+            
+                    self.id_map.append(int(source_id))
+            
+                #if Utilities.is_above_line(std, mean, 17, 0, 0.05) and mean > 50:
+                #if value < 0.01 and mean > 3:
+                    #print(file.split("id")[1].split(".")[0],Utilities.mean(t['counts']))
         Utilities.quicksort([self.means, self.stds, self.id_map], True)
 
         if adjusted:
@@ -246,16 +237,8 @@ class DataAnalyser:
             FluxFinder object used to get a thumbnail slice
         """
         
-        if adjusted:
-            light_curve_dir = self.config.adjusted_curve_dir
-        else:
-            light_curve_dir = self.config.light_curve_dir
-        
 
-        for i in range(len(self.results_table['id'])):
-
-            fname = self.config.source_format_str.format(int(self.results_table['id'][i]))
-            path = os.path.join(light_curve_dir, fname)
+        for path, source_id, i in enumerate(Utilities.list_sources(self.config, adjusted)):
             t = Table.read(path, format=self.config.table_format)
             
             i_dim = 0
@@ -272,7 +255,7 @@ class DataAnalyser:
             i_y = self.results_table['ycentroid'][i]
             
             print("[DataAnalyser] Creating thumbnail for source id {:04}, centroid {},{}".format(
-                int(self.results_table['id'][i]), i_x, i_y))
+                source_id, i_x, i_y))
             
             ## Magic numbers
             dim = ff.get_thumbnail(i_dim+1, i_x, i_y, 20, True)
@@ -294,7 +277,7 @@ class DataAnalyser:
             plt.imshow(bright, origin='upper', cmap='gray', norm = bright_norm)
             
             fname= "thumb_{}_{}{:04}{}".format(self.config.image_prefix, self.config.identifier,
-                    self.results_table['id'][i], self.config.plot_file_extension)
+                    source_id, self.config.plot_file_extension)
             path = os.path.join(self.config.output_dir, fname)
 
             plt.savefig(path)
@@ -378,17 +361,12 @@ class DataAnalyser:
     def divide_by_average(self):
         print("[DEBUG] Calling `divide_by_average` in DataAnalyser")
                     
-        #for all files
-        for file in os.listdir(self.config.light_curve_dir):
-            if file[:len(self.config.image_prefix)] == self.config.image_prefix:
-                
-                path = os.path.join(self.config.light_curve_dir, file)
+        #for all source files
+        for path, source_id in Utilities.list_sources(self.config):
                 t = Table.read(path, format=self.config.table_format)
                                                 
                 this_fluxes = t['counts']
                 this_times = t['time']
-                
-                source_id = file.split(self.config.identifier)[1].split(".")[0]
                 
                 for i in range(len(this_fluxes)):
                     time = this_times[i]
