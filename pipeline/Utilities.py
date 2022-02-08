@@ -254,12 +254,16 @@ def _quicksort(a, start, end, ascending):
 def quicksort(a, ascending):
     _quicksort(a, 0, len(a[0])-1, ascending)
     
-def print_job(job):
-    
-    now = datetime.now()
+def finished_job(job_name, start_time):
+    current_time = datetime.now()
 
-    current_time = now.strftime("%H:%M:%S")
-    print("Finished " + job + " at " + current_time)
+    time_elapsed = current_time - start_time
+
+    current_time_str = current_time.strftime("%H:%M:%S")
+    print("[Job] Finished job '{}' at {} (took {})"
+            .format(job_name, current_time_str, str(time_elapsed)))
+
+    return current_time
         
 #make .region file for comparing catalogue to actual image
 def make_reg_file(directory, name, table):

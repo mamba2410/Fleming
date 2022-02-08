@@ -118,17 +118,24 @@ class FluxFinder:
             
         
         image_data = Utilities.get_image(self.config, set_number, image_number)[0].data
-                
+        x_max = len(image_data[0])
+        y_max = len(image_data)
+
         # Local background subtraction
 
         ## TODO: Magic number, use the config ones
         # Define size of background aperture
-        annulus_apertures = CircularAnnulus(positions, r_in=10, r_out=15)
-        apertures = CircularAperture(positions, r=9)
+        annulus_apertures = CircularAnnulus(
+                positions,
+                r_in=self.config.inner_radius,
+                r_out=self.config.outer_radius)
+        apertures = CircularAperture(positions, r=self.config.inner_radius-1)
         apers = [apertures, annulus_apertures]
 
         # find counts in each aperture and annulus
         phot_table2 = aperture_photometry(image_data, apers)
+
+        n_sources_phot = len(phot_table2['id'])
 
         for col in phot_table2.colnames:
             phot_table2[col].info.format = '%.8g'  # for consistent table output
@@ -140,12 +147,12 @@ class FluxFinder:
         phot_table2['mean'] = phot_table2['aperture_sum_1']*0 - 1
 
 
-        for i in range(len(phot_table2)):
+        for i in range(n_sources_phot):
             
             x, y = positions[i]
 
             #check that largest aperture does not exceed the boundaries of the image
-            if Utilities.is_within_boundaries(x, y, len(image_data[0]), len(image_data), 15):
+            if Utilities.is_within_boundaries(x, y, x_max, y_max, 15):
 
                 # Calc the mean background in the second aperture ring
                 bkg_mean = phot_table2['aperture_sum_1'][i] / annulus_apertures.area
@@ -166,18 +173,24 @@ class FluxFinder:
 
 
         #for each source
-        for q in range(0,len(phot_table2)):
+        for q in range(n_sources_phot):
             x, y = positions[q]
  
             xypos = (x, y)
 
             ## TODO: Magic number
             #check that largest aperture does not exceed the boundaries of the image
-            if Utilities.is_within_boundaries(x, y, len(image_data[0]), len(image_data), 15):
-                annulus = CircularAnnulus(xypos, r_in=self.config.inner_radius, r_out=self.config.outer_radius)
+            if Utilities.is_within_boundaries(x, y, x_max, y_max, 15):
+                annulus = CircularAnnulus(
+                        xypos,
+                        r_in=self.config.inner_radius, 
+                        r_out=self.config.outer_radius)
                 ann_mask = annulus.to_mask(method='center')
+                #print(ann_mask)
                 weighted_data = ann_mask.multiply(image_data)
+                print(weighted_data)
                 phot_table2['median'][q] = np.median(weighted_data[weighted_data != 0])
+
                 
                 # Calc the median background in the second aperture ring
                 bkg_med = phot_table2['median'][q]
@@ -188,6 +201,9 @@ class FluxFinder:
             
             
                 phot_table2['residual_aperture_sum_med'][q] = final_sum
+            else:
+                print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
+                        .format(q, x_max, y_max, x, y))
         
         phot_table2['residual_aperture_sum_med'].info.format = '%.8g'  # for consistent table output
         
@@ -259,10 +275,12 @@ class FluxFinder:
                         
                     
                     #if median has reasonable value
-                    #if t['median'][j] > 0: 
-                    #    light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
-                    #    print(light_curves[j][-1])
-                    light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
+                    if t['median'][j] > 0: 
+                        light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
+                    else:
+                        print("[FluxFinder] Rejecting value for source {}, median is {}"
+                                .format(t['id'][j], t['median'][j]))
+                    #light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
 
         #loop through all light curves, writing them out to a file
         for j in range(len(light_curves)):

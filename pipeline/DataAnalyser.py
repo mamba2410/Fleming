@@ -225,6 +225,9 @@ class DataAnalyser:
         
         ## TODO: write results_table to file?
 
+        print("[DataAnalyser] Found {} variables out of {} sources"
+                .format(len(self.variable_ids), len(self.means)))
+
         return self.variable_ids
             
     
