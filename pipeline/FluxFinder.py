@@ -310,7 +310,7 @@ class FluxFinder:
         
         
         
-    def plot_light_curve(self, source_id=None, path=None, adjusted=False, show=False):
+    def plot_light_curve(self, source_id=None, curve_path=None, adjusted=False, show=False):
         """
         Plot light curve of star with the given ID from catalogue
 
@@ -321,7 +321,7 @@ class FluxFinder:
             ID of the source to plot light curve for.
             Plots average light curve if `None`
 
-        path: string, optional
+        curve_path: string, optional
             Path to save the image to
 
         adjusted: bool
@@ -330,14 +330,14 @@ class FluxFinder:
         """
         print("[FluxFinder] Plotting light curve for source {}".format(source_id))
         
-        if path == None:
+        if curve_path == None:
             fname = self.config.source_format_str.format(source_id)
             if adjusted:
-                path = os.path.join(self.config.adjusted_curve_dir, fname)
+                curve_path = os.path.join(self.config.adjusted_curve_dir, fname)
             else:
-                path = os.path.join(self.config.light_curve_dir, fname)
+                curve_path = os.path.join(self.config.light_curve_dir, fname)
 
-        table = Table.read(path, format=self.config.table_format)
+        table = Table.read(curve_path, format=self.config.table_format)
         
         times = table['time']
         fluxes = table['counts']
@@ -373,14 +373,24 @@ class FluxFinder:
             plt.title("Light curve for unknown source (id {}) (adjusted={})"
                 .format(source_id, adjusted))
             
+        print("[FluxFinder] Making light curve for source {} (adjusted={})"
+                .format(source_id, adjusted))
         if show:
             plt.show()
 
         image_file = os.path.join(self.config.output_dir, fname)
         plt.savefig(image_file)
         plt.close()
-        
 
+
+        
+    def plot_all_light_curves(self, ids, adjusted=False, show=False):
+        for _i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
+            self.plot_light_curve(curve_path=path, adjusted=adjusted, show=show)
+
+
+    def plot_avg_light_curve(self, curve_path, adjusted=False, show=False):
+        self.plot_light_curve(source_id=None, curve_path=curve_path, adjusted=adjusted, show=show)
     
     ## TODO: Duplicate somewhere else
     #use median
@@ -401,7 +411,7 @@ class FluxFinder:
             source_id = ids[i]
             fname = self.config.source_format_str.format(source_id)
             path = os.path.join(self.config.light_curve_dir, fname)
-            print("source_id: {}".format(source_id))
+            #print("source_id: {}".format(source_id))
             
             #get the light curve for star i
             t = Table.read(path, format=self.config.table_format)

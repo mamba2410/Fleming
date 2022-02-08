@@ -221,8 +221,11 @@ class DataAnalyser:
                     self.results_table.add_row([int(id), cat['xcentroid'][row_index], cat['ycentroid'][row_index], variability, 0, 0])
                 #remove False literal here
                 if adjusted:
-                    ff.plot_light_curve(self.id_map[i], adjusted=True)
+                    ff.plot_light_curve(source_id=self.id_map[i], adjusted=True)
         
+        ## TODO: write results_table to file?
+
+        return self.variable_ids
             
     
     ## TODO: Magic numbers
