@@ -12,19 +12,23 @@ from astropy.visualization import (ZScaleInterval, LinearStretch,
 class DataAnalyser:
     
     config = None
-    means = []
-    stds = []
-    var_stds = []
-    var_means = []
-    id_map = []
-    avg_fluxes = []
-    times = []
-    results_table = None
-    variable_ids = []
+
+    n_sources = 0
+    source_ids = None
+    source_means = None
+    source_medians = None
+    source_stds = None
+
+    n_variables = 0
+    variable_scores = None
+    variable_ids = None
+    variable_mask = None
     
-    
-    def __init__(self, config):
+
+    def __init__(self, config, source_ids):
         self.config = config
+        self.source_ids = source_ids
+        self.n_sources = len(source_ids)
 
         
     #plot the means and standard deviations of all light curves generated
@@ -38,23 +42,26 @@ class DataAnalyser:
         ----------
 
         adjusted: bool, optional
-            Has light curve been divided by average?
+            use adjusted light curve?
         """
         
-        #build path of the directory in which the light curves are stored
-        self.means = []
-        self.stds = []
-        self.id_map = []
+        source_medians = np.empty(n_sources)
+        source_means = np.empty(n_sources)
+        source_stds  = np.empty(n_sources)
         
-        #cat = Table.read(self.filesdir + self.config.working_directory + self.config.catalogue_prefix + self.image_names + self.config.standard_file_extension, format=self.config.table_format)
-        
+
+        ## TODO: loop better
         #for each file in the light curve directory 
-        for path, source_id in Utilities.list_sources(self.config, adjusted=adjusted):
+        for source_index, path, source_id in Utilities.loop_variables(self.config, self.source_ids, adjusted=adjusted):
             
             #read light curve data from file
-            t = Table.read(path, format=self.config.table_format)
-            #print(len(t['counts']))
+            lc = np.genfromtxt(path, dtype=[
+                ('time', 'float64'),
+                ('counts', 'float64')
+                ])
+            n_measures = len(lc['time'])
             
+            ## TODO: Move this
             if adjusted:
                 if self.remove_cosmics(t):
                     print("[DataAnalyser] Removed cosmics on id {}", source_id)
@@ -62,33 +69,26 @@ class DataAnalyser:
                             
             ## TODO: Magic number
             #only plot data point if at least 5 non-zero counts are recorded
-            if len(t['counts']) > self.config.set_size*self.config.n_sets / 3:
+            if n_measures > self.config.set_size*self.config.n_sets / 3:
                 
-                mean = Utilities.mean(t['counts'])
-                std = Utilities.standard_deviation(t['counts'])
-                value = std/mean
-                
+                self.source_means[i]   = np.mean(lc['counts'])
+                self.source_stds[i]    = np.std(lc['counts'])
+                self.source_medians[i] = np.median(lc['counts'])
                                                    
+                ## TODO: Value checking
                 if value > 0 and value < 2: #and mean > 0.02 and mean < 80:
-                    
                     self.stds.append(value)
                     self.means.append(mean)
-            
                     self.id_map.append(int(source_id))
-            
-                #if Utilities.is_above_line(std, mean, 17, 0, 0.05) and mean > 50:
-                #if value < 0.01 and mean > 3:
-                    #print(file.split("id")[1].split(".")[0],Utilities.mean(t['counts']))
-        Utilities.quicksort([self.means, self.stds, self.id_map], True)
 
-        if adjusted:
-            print("[DataAnalyser] Floor at {}", min(self.stds))
+        #Utilities.quicksort([self.means, self.stds, self.id_map], True)
         
 
 
     def plot_means_and_stds(self, adjusted=False):
         """
-        Plot means against standard deviations of each source
+        Plot means against standard deviations of each source.
+        Overplotted in red are the stars deemed variable.
 
         Parameters
         ----------
@@ -100,18 +100,26 @@ class DataAnalyser:
 
         #plt.figure(figsize=(16, 10))
 
-        plt.scatter(self.means, self.stds, marker = '.');
-        plt.scatter(self.var_means, self.var_stds, marker = '.', color = 'red');
+        plt.scatter(
+                self.source_means,
+                self.source_stds,
+                marker='.');
+        plt.scatter(
+                self.source_means[self.variable_mask],
+                self.source_stds[self.variable_mask],
+                marker='.',
+                color = 'red');
+
         plt.xscale('log')
         plt.yscale('log')
         plt.xlabel("Mean [counts]")
         plt.ylabel("Standard deviation [counts]")
-        plt.xlim(self.means[len(self.means)-1] * 1.3, self.means[0] * 0.7)
         plt.title("Mean against standard deviation for all sources in field {}"
                 .format(self.config.image_prefix))
         
         #ensure plot y axis starts from 0
-        plt.gca().set_ylim(bottom=1e-9)
+        #plt.gca().set_ylim(bottom=1e-9)
+        #plt.xlim(self.means[len(self.means)-1] * 1.3, self.means[0] * 0.7)
         
         if adjusted:
             fname = "std_dev_mean_adjusted{}".format(self.config.plot_file_extension)
@@ -128,7 +136,7 @@ class DataAnalyser:
 
     ## TODO: Merge with `is_variable` in Cataloguer
     ## TODO: Why using index range?
-    def get_variable_score(self, index):
+    def get_variable_score(self, source_index):
         """
         Returns a score determining the variability of the star
 
@@ -145,10 +153,8 @@ class DataAnalyser:
         """
         
        
-        #values = []
-        
-        llim = index - self.config.check_radius
-        ulim = index + self.config.check_radius + 1
+        llim = source_index - self.config.check_radius
+        ulim = source_index + self.config.check_radius + 1
         
         if llim < 0:
             llim = 0
@@ -156,68 +162,86 @@ class DataAnalyser:
         if ulim > len(self.means):
             ulim = len(self.means)
         
-        #for i in range(llim, ulim):
-        #    if i != index:
-        #        values.append(self.stds[i])
-        
 
-        #use median instead of mean
-        #median = np.median(values)
+        ## Median of standard deviations
+        ## TODO: Why index range instead of flux range?
+        ## TODO: Move this out of here
+        median_std = np.median(self.source_stds[llim:ulim])
+        #std_threshold = median_std * (1 + self.config.variability_threshold)
 
-        ## Median of standard deviations in a 
-        median = np.median(self.stds[llim:ulim])
-        
-        if self.stds[index] > median * (1 + self.config.variability_threshold):
-            
-            self.var_means.append(self.means[index])
-            self.var_stds.append(self.stds[index])
+        #if self.source_stds[index] > std_threshold:
+        #    self.variable_mask = np.append(self.variable_mask, source_index)
+        #    #self.variable_means.append(self.means[index])
+        #    #self.variable_stds.append(self.stds[index])
 
-        variable_score = (self.stds[index] - median)/ median
+        variable_score = (self.source_stds[source_index] - median_std)/ median_std
         return variable_score
         
         
 
     def get_variable_ids(self):
         """
-        Print plots of all variable stars in catalogue, and stores their
-        IDs, xy-coords and variability scores in a table
+        Calculates the variability score of all stars in the catalogue
+        then builds a list of source indexes which are deemed variable
 
         """
 
-        cat = Table.read(self.config.catalogue_path, format=self.config.table_format)
-        self.results_table = Table(names = ('id', 'xcentroid', 'ycentroid', 'variability', 'RA', 'DEC'))
+        #cat = np.genfromtxt(self.config.catalogue_path, dtype=[
+        #    ('id', 'int64'),
+        #    ('xcentroid', 'float64'),
+        #    ('ycentroid', 'float64'),
+        #    ('sharpness', 'float64'),
+        #    ('roundness1', 'float64'),
+        #    ('roundness2', 'float64'),
+        #    ('npix', 'float64'),
+        #    ('sky', 'float64'),
+        #    ('peak', 'float64'),
+        #    ('flux', 'float64'),
+        #    ('mag', 'float64'),
+        #    ])
+        #self.results_table = Table(names = ('id', 'xcentroid', 'ycentroid', 'variability', 'RA', 'DEC'))
         
-        for i in range(len(self.means)):
-            variability = self.get_variable_score(i)
-            
-            if variability > self.config.variability_threshold:
-                variable_id = self.id_map[i]
-                self.variable_ids.append(variable_id)
-                
-                row_index = np.where(cat['id'].data==variable_id)
+        print("[DEBUG] Catalogue has {} sources, DA has {}"
+                .format(len(cat['id']), n_sources))
 
-                if 'RA' in cat.colnames:
-                    self.results_table.add_row([
-                        int(variable_id),
-                        cat['xcentroid'][row_index],
-                        cat['ycentroid'][row_index],
-                        variability,
-                        cat['RA'][row_index],
-                        cat['DEC'][row_index]])
-                else:
-                    self.results_table.add_row([
-                        int(variable_id),
-                        cat['xcentroid'][row_index],
-                        cat['ycentroid'][row_index], 
-                        variability,
-                        0,
-                        0])
+        self.variable_scores = np.zeros(self.n_sources)
+
+        ## Loop over sources in the catalogue
+        for i in range(self.n_sources):
+            self.variable_scores[i] = self.get_variable_score(i)
+            
+            if self.variable_scores[i] > self.config.variability_threshold:
+
+                ## TODO: Do this after the loop and join with no.where
+                self.variable_ids = np.append(self.variable_ids, self.source_ids[i])
+                self.variable_mask = np.append(self.variable_mask, i)
+                
+                ## TODO: Check if catalogue is always ordered in ids
+                #row_index = np.where(cat['id'].data==variable_id)
+
+                ## TODO: Build table? Join with existing data
+                #if 'RA' in cat.colnames:
+                #    self.results_table.add_row([
+                #        int(variable_id),
+                #        cat['xcentroid'][row_index],
+                #        cat['ycentroid'][row_index],
+                #        variability,
+                #        cat['RA'][row_index],
+                #        cat['DEC'][row_index]])
+                #else:
+                #    self.results_table.add_row([
+                #        int(variable_id),
+                #        cat['xcentroid'][row_index],
+                #        cat['ycentroid'][row_index], 
+                #        variability,
+                #        0,
+                #        0])
         
 
         ## TODO: write results_table to file?
 
         print("[DataAnalyser] Found {} variables out of {} sources"
-                .format(len(self.variable_ids), len(self.means)))
+                .format(len(self.variable_ids), self.n_sources))
 
         return self.variable_ids
             
