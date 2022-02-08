@@ -2,7 +2,7 @@
 
 ## Immediate improvements
 
-- Reformat `Constants.py` -> `Config.py` and have it be an object to pass around
+- Commented out line in `FluxFinder.py:262` in `make_light_curves()`. Seems median is zero or negative
 - Convert a lot of arrays to numpy arrays.
 - Merge/cache functions and file names
 - Thumbnail size in `Constants.py`

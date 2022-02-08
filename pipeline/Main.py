@@ -46,8 +46,8 @@ def main():
             config.image_format_str
             .format(catalogue_set_number, catalogue_image_number))
 
-    c.catalogue(catalogue_image_path, solve=False)
-    n_sources = c.get_n_sources()
+    n_sources = c.generate_catalogue(catalogue_image_path, solve=False)
+    c.generate_image_times()
 
     cataloguer_time = Utilities.finished_job("cataloguing stars", reducer_time)
     
@@ -59,11 +59,12 @@ def main():
      
     ## ShiftFinder
     ## Gets the shift of each star for each image in the series
-    sf = ShiftFinder.ShiftFinder(config)
-    sf.get_all_shifts()
+    sf = ShiftFinder.ShiftFinder(config, n_sources)
+    sf.generate_shifts()
      
     shift_finder_time = Utilities.finished_job("finding shifts", cataloguer_time)
      
+    exit()
 
     ## FluxFinder
     ff = FluxFinder.FluxFinder(config, n_sources)
