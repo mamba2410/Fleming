@@ -127,6 +127,7 @@ class DataAnalyser:
 
 
     ## TODO: Merge with `is_variable` in Cataloguer
+    ## TODO: Why using index range?
     def get_variable_score(self, index):
         """
         Returns a score determining the variability of the star
@@ -144,85 +145,75 @@ class DataAnalyser:
         """
         
        
-        values = []
-        
+        #values = []
         
         llim = index - self.config.check_radius
+        ulim = index + self.config.check_radius + 1
         
         if llim < 0:
             llim = 0
         
-        ulim = index + self.config.check_radius + 1
-        
         if ulim > len(self.means):
             ulim = len(self.means)
         
-        for i in range(llim, ulim):
-            if i != index:
-                values.append(self.stds[i])
+        #for i in range(llim, ulim):
+        #    if i != index:
+        #        values.append(self.stds[i])
         
+
         #use median instead of mean
-        
-        median = np.median(values)
+        #median = np.median(values)
+
+        ## Median of standard deviations in a 
+        median = np.median(self.stds[llim:ulim])
         
         if self.stds[index] > median * (1 + self.config.variability_threshold):
             
             self.var_means.append(self.means[index])
             self.var_stds.append(self.stds[index])
-            
-        return (self.stds[index] - median)/ median
+
+        variable_score = (self.stds[index] - median)/ median
+        return variable_score
         
         
-    #seems to serve same function as same fn in cataloguer?
-    #looks like this one is the one that is actually used
-    #comments in other
-    def get_variables(self, ff, adjusted=False):
+
+    def get_variable_ids(self):
         """
         Print plots of all variable stars in catalogue, and stores their
         IDs, xy-coords and variability scores in a table
 
-        Parameters
-        ----------
-
-        ff: FluxFinder
-            FluxFinder object 
-
         """
 
-        print("[DEBUG] Getting variables in DataAnalyser")
-        
-        t = 0
-        
-        self.var_means = []
-        self.var_stds = []
-        
         cat = Table.read(self.config.catalogue_path, format=self.config.table_format)
-
         self.results_table = Table(names = ('id', 'xcentroid', 'ycentroid', 'variability', 'RA', 'DEC'))
         
-        #ff = FluxFinder.FluxFinder(self.workspace_dir, self.image_prefix, True, 9, 50)
-
         for i in range(len(self.means)):
-            
             variability = self.get_variable_score(i)
             
             if variability > self.config.variability_threshold:
+                variable_id = self.id_map[i]
+                self.variable_ids.append(variable_id)
                 
-                t+= 1
-                id = self.id_map[i]
-                self.variable_ids.append(id)
-                
-                row_index = np.where(cat['id'].data==id)
+                row_index = np.where(cat['id'].data==variable_id)
+
                 if 'RA' in cat.colnames:
-                    
-                    self.results_table.add_row([int(id), cat['xcentroid'][row_index], cat['ycentroid'][row_index], variability, cat['RA'][row_index], cat['DEC'][row_index]])
+                    self.results_table.add_row([
+                        int(variable_id),
+                        cat['xcentroid'][row_index],
+                        cat['ycentroid'][row_index],
+                        variability,
+                        cat['RA'][row_index],
+                        cat['DEC'][row_index]])
                 else:
-         
-                    self.results_table.add_row([int(id), cat['xcentroid'][row_index], cat['ycentroid'][row_index], variability, 0, 0])
-                #remove False literal here
-                if adjusted:
-                    ff.plot_light_curve(source_id=self.id_map[i], adjusted=True)
+                    self.results_table.add_row([
+                        int(variable_id),
+                        cat['xcentroid'][row_index],
+                        cat['ycentroid'][row_index], 
+                        variability,
+                        0,
+                        0])
         
+
         ## TODO: write results_table to file?
 
         print("[DataAnalyser] Found {} variables out of {} sources"

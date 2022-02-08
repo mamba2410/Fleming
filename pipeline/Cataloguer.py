@@ -177,8 +177,12 @@ class Cataloguer:
         """
         Find the means and standard deviations of all light curves generated.
 
-        Parameters:
-        adjusted: bool. Has the light curves been adjusted (divided by average)
+        Parameters
+        ==========
+
+        adjusted: bool
+            Has the light curves been adjusted (divided by average)
+
         """
         
         self.means = []
@@ -261,71 +265,6 @@ class Cataloguer:
 
         plt.close()
     
-
-
-    ## TODO: I think a better method should be implemented
-    ## Merge with `get_variable_score` in DataAnalyser
-    def is_variable(self, index):
-        """
-        Finds which stars are variable by comparing their standard deviations
-        and means to those of the surrounding stars in the mean-std plot.
-
-        Parameters
-        ----------
-
-        index: 
-
-        """
-        
-        total = 0
-        
-        #ensures only checks for surrounding stars where they exist
-        #(no indexing errors)
-        llim = index - self.config.check_radius
-        
-        if llim < 0:
-            llim = 0
-        
-        ulim = index + self.config.check_radius + 1
-        
-        if ulim > len(self.means):
-            ulim = len(self.means)
-        
-        #find average std for surrounding stars in plot
-        for i in range(llim, ulim):
-            if i != index:
-                total += self.stds[i]
-        
-        avg = total / (ulim-llim)
-        
-        #if this star's std is much higher than the surrounding average
-        #it is a variable star
-        if self.stds[index] > avg * (1 + self.config.variability_threshold):
-            
-            self.var_means.append(self.means[index])
-            self.var_stds.append(self.stds[index])
-            
-            return True
-        return False
-        
-        
-            
-    ## TODO:Improve this
-    def show_variables(self, ff, show=True):
-        """
-        Print plots of all variable stars in database
-
-        Parameters
-        ----------
-
-        ff: FluxFinder
-        """
-        
-        for i in range(len(self.means)):
-            if self.is_variable(i):
-                ff.plot_light_curve(self.id_map[i], adjusted=True, show=show)
-        
-
 
     ## TODO: Magic numbers, make this more config friendly
     def get_ids_for_avg(self):
