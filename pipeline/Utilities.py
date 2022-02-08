@@ -150,7 +150,7 @@ def list_sources(config, directory=None, adjusted=False):
     else:
         if adjusted:
             print("[DEBUG] listing adjusted sources")
-            d = config.adjusted_light_curve_dir
+            d = config.adjusted_curve_dir
         else:
             print("[DEBUG] listing sources")
             d = config.light_curve_dir
@@ -166,6 +166,26 @@ def list_sources(config, directory=None, adjusted=False):
 
     return source_list
 
+def loop_variables(config, ids, adjusted=False):
+    """
+    Loop over variables in given id table
+
+    """
+
+    if adjusted:
+        print("[DEBUG] listing adjusted sources")
+        d = config.adjusted_curve_dir
+    else:
+        print("[DEBUG] listing sources")
+        d = config.light_curve_dir
+            
+    variables_list = []
+
+    for i, s in enumerate(ids):
+        path = os.path.join(d, config.source_format_str.format(int(s)))
+        variables_list.append((i, path, s))
+
+    return variables_list
 
 #standard deviation of items in a list
 def standard_deviation(a):

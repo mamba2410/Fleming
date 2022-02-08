@@ -29,12 +29,13 @@ class FluxFinder:
     avg_fluxes = []
     
     
-    def __init__(self, config):
+    def __init__(self, config, n_sources):
         """
         Initialises class and reads shifts and catalogue from files.
         """
 
         self.config = config
+        self.n_sources = n_sources
         
         self.catalogue = Table.read(self.config.catalogue_path, format=config.table_format)
 
@@ -258,8 +259,10 @@ class FluxFinder:
                         
                     
                     #if median has reasonable value
-                    if t['median'][j] > 0: 
-                        light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
+                    #if t['median'][j] > 0: 
+                    #    light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
+                    #    print(light_curves[j][-1])
+                    light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
 
         #loop through all light curves, writing them out to a file
         for j in range(len(light_curves)):
@@ -395,7 +398,8 @@ class FluxFinder:
                 
         #iterate through each star in the given list
         for i in range(len(ids)):
-            fname = self.config.source_format_str.format(ids[i])
+            source_id = ids[i]
+            fname = self.config.source_format_str.format(source_id)
             path = os.path.join(self.config.light_curve_dir, fname)
             print("source_id: {}".format(source_id))
             

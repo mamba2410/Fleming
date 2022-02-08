@@ -28,6 +28,7 @@ class Cataloguer:
     avgs = []
     
     id_map = []
+    solve = True        ## debug, solve astrometry_net plate
     wcs = None          ## TODO: Do something with this
 
     
@@ -41,16 +42,22 @@ class Cataloguer:
         self.config = config
 
 
-    def catalogue(self, image_path):
+    def catalogue(self, image_path, solve=True):
         """
         Generates a catalogue of all the stars in the given image, as well as
         a list of the times at which each image was taken.
 
         Parameters
         ----------
-        image_path: string, path to the fits image to catalogue all the stars.
+        image_path: string
+            path to the fits image to catalogue all the stars.
+        solve: bool, optional
+            should solve astrometry.net wcs
+
 
         """
+
+        self.solve = solve
 
         #read in image data
         image_data = fits.getdata(image_path, ext=0)
@@ -368,9 +375,11 @@ class Cataloguer:
         ast.TIMEOUT = self.config.astrometry_timeout
         ast.api_key = self.config.api_key
     
+        wcs = None
+        if not self.solve:
+            return WCS(header=wcs)
     
         print("[Astrometry] Starting job")
-        wcs = None
         try:
             ## Solve on local machine
             wcs = ast.solve_from_image(
@@ -386,6 +395,9 @@ class Cataloguer:
         ## TODO: Gives warning with no image data
         return WCS(header=wcs)
             
+
+    def get_n_sources(self):
+        return self.n_sources
 
         
 ## End of class

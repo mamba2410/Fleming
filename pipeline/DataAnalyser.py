@@ -53,7 +53,7 @@ class DataAnalyser:
             
             #read light curve data from file
             t = Table.read(path, format=self.config.table_format)
-            print(len(t['counts']))
+            #print(len(t['counts']))
             
             if adjusted:
                 if self.remove_cosmics(t):
@@ -237,8 +237,8 @@ class DataAnalyser:
             FluxFinder object used to get a thumbnail slice
         """
         
-
-        for i, path, source_id in enumerate(Utilities.list_sources(self.config, adjusted)):
+        #for i, (path, source_id) in enumerate(Utilities.list_sources(self.config, adjusted=adjusted)):
+        for i, path, source_id in Utilities.loop_variables(self.config, self.results_table['id']):
             t = Table.read(path, format=self.config.table_format)
             
             i_dim = 0
