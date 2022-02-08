@@ -1,6 +1,6 @@
 from astropy.table import Table
 from astropy.io import fits
-from photutils import centroid_2dg
+from photutils.centroids import centroid_2dg, centroid_sources
 import os
 import Constants
 import Utilities
@@ -9,59 +9,45 @@ import numpy as np
 class ShiftFinder:
 
     config = None
+    n_sources = None
     
-    def __init__(self, config):
+    def __init__(self, config, n_sources):
         self.config = config
+        self.n_sources = n_sources
 
     
-    # TODO: Quicksort, magic numbers, general improvements
-    def get_reference_coordinates(self):
+    ## TODO: Delete comments? Original returned a slice
+    def get_reference_coordinates(self, n_reference_stars):
         """
-        Finds pixel coordinates of brightest star in catalogue
+        Finds pixel coordinates of n brightest stars in catalogue
+
         """
         
         #reads in catalogue
-        t = Table.read(self.config.catalogue_path, format=self.config.table_format)
+        catalogue = Utilities.read_catalogue(self.config)
 
-        xs = t["xcentroid"]
-        ys = t["ycentroid"]
-        
-        fluxes = t["flux"]
-        max = 0
-        
-        Utilities.quicksort([fluxes, xs, ys], True)
+        xs = catalogue["xcentroid"]
+        ys = catalogue["ycentroid"]
+        fluxes = catalogue["flux"]
+    
+        sorted_indices = np.argsort(fluxes)
 
-        # Magic numbers
-        i = int(len(fluxes)*0.8)
-        n = 10
-        
-        if i + n >= len(fluxes):
-            n = (len(fluxes) - i)
-        
-        x = xs[i:i+10]
-        y = ys[i:i+10]
-        
-# =============================================================================
-#         #finds index of brightest star
-#         #DO THIS ON MULTIPLE STARS
-#         for i in range(len(fluxes)):
-#             if float(fluxes[i]) > fluxes[max]:
-#                 max = i
-#             
-#         x = xs[max]
-#         y = ys[max]
-# =============================================================================
-        
-        return x, y
+        brightest_xs = xs[sorted_indices][:n_reference_stars]
+        brightest_ys = ys[sorted_indices][:n_reference_stars]
+
+        return brightest_xs, brightest_ys
     
 
-    ## TODO: Understand more
+
     ## TODO: Fit warnings are probably in here
     def find_shift(self, previous_x, previous_y, image_path, size=10):
         """
         
         Parameters
         ----------
+
+        previous_x, previous_y: int
+            Previous x and y pixel coordinates of star
         image_path: string
             Path to the next image to find shifts.
         size: int, optional, default=10
@@ -76,18 +62,37 @@ class ShiftFinder:
 
         """
         
-        # TODO: Use get_image from other class
         # open the next image and load it as an array
-        image = fits.open(image_path)
-        data_array = image[0].data
-        
+        data_array = fits.open(image_path)[0].data
+
+        xlow  = int(previous_x)-size
+        xhigh = int(previous_x)+size
+
+        if xlow < 0: 
+            xlow = 0
+        if xhigh > self.config.image_width:
+            xhigh = self.config.image_width
+
+        ylow  = int(previous_y)-size
+        yhigh = int(previous_y)+size
+
+        if ylow < 0: 
+            ylow = 0
+        if yhigh > self.config.image_height:
+            yhigh = self.config.image_height
+
         # Select just the box around the star
-        data_square = data_array[int(previous_y)-size:int(previous_y)+size, int(previous_x)-size:int(previous_x)+size] # note your x,y coords need to be an int
-        
+        data_square = data_array[ylow:yhigh,xlow:xhigh]
+
+        #print(len(data_array), len(data_array[0]))
+        #print(ylow, yhigh, xlow, xhigh)
+        #print(data_square)
+
         # Get coordinates of the centre of the star in the data square
         # Fits a 2d Gaussian to data
         x, y = centroid_2dg(data_square)
 
+        ## TODO: Why this weird way of calculating?
         #calculate shift between previous position and newly calculated
         #positions        
         x_shift = ((x - size) - (previous_x - int(previous_x)))
@@ -99,77 +104,71 @@ class ShiftFinder:
         
 
 
+    ## TODO: Shifts seem to be wildly different each time, +/- 10 pixels per image
     ## TODO: Fix fit warnings
-    def get_all_shifts(self):
+    def generate_shifts(self):
         
         #empty shift file if it exists
         if(os.path.exists(self.config.shift_path)):
             open(self.config.shift_path, "w").close()
         
-        x_shifts = []
-        y_shifts = []
+        n_images = self.config.n_sets*self.config.set_size
+
+        star_shifts = np.empty(shape=(2, n_images))
         
-        #get coordinates of 10 bright stars in image to use as a reference
-        xs, ys = self.get_reference_coordinates()
+        #get coordinates of N bright stars in image to use as a reference
+        ref_x, ref_y = self.get_reference_coordinates(self.config.n_reference_stars)
         
-        j = 0
-        
-        
+
+        ## Initial shifts are zero
+        prev_x_shift = 0
+        prev_y_shift = 0
+
+
+        ## Shifts of the reference stars
+        ## Rewritten after each image
+        ref_shifts_x = np.zeros(self.config.n_reference_stars)
+        ref_shifts_y = np.zeros(self.config.n_reference_stars)
+
         #iterate through each image in each set
-        for s in range(1, self.config.n_sets+1):
-            for i in range(1, self.config.set_size+1):    
+        j = 0
+        for fname, s, i in Utilities.loop_images(self.config):
+            image_path = os.path.join(self.config.image_dir, fname)
+            print("[ShiftFinder] Finding shifts in image: set {:1}; image {:03}...".format(s, i))
+                
+            
+            for k in range(self.config.n_reference_stars):
 
-                print("[ShiftFinder] Finding shifts in image: set {:1}; image {:03}...".format(s, i))
+                #find shift between the x and y of reference star k in the 
+                #previous image and the current image
+                ref_shifts_x[k], ref_shifts_y[k] = self.find_shift(ref_x[k], ref_y[k], image_path)
+                
+                
+            ## Get median shift
+            med_shift_x = np.median(ref_shifts_x)
+            med_shift_y = np.median(ref_shifts_y)
 
-                if self.config.has_sets:
-                    image_path = os.path.join(self.config.image_dir,
-                            self.config.image_format_str.format(s, i))
-                else:
-                    image_path = os.path.join(self.config.image_dir,
-                            self.config.image_format_str.format(i))
+            ## Numpy does the loop for us
+            ref_x += med_shift_x
+            ref_y += med_shift_y
+            
+            star_shifts[0][j] = med_shift_x + prev_x_shift
+            star_shifts[1][j] = med_shift_y + prev_y_shift
 
-                
-                avg_x = []
-                avg_y = []
-                
-                for k in range(len(xs)):
-                    #find shift between the x and y of the reference star in the 
-                    #previous image and the current image
-                    x_shift, y_shift = self.find_shift(xs[k], ys[k], image_path)
-                    
-                    #append the total shift so far to the arrays containing
-                    #the shifts
-                    avg_x.append(x_shift)
-                    avg_y.append(y_shift)
-                
-                if s == 1 and i == 1:
-                    prev_x_shift = 0
-                    prev_y_shift = 0
-                else:
-                    prev_x_shift = x_shifts[j-1]
-                    prev_y_shift = y_shifts[j-1]
-                    
-                
-                med_x = np.median(avg_x)
-                med_y = np.median(avg_y)
-                for l in range(len(xs)):
-                    #update previous x and y
-                    xs[l] += med_x
-                    ys[l] += med_y
-                
-                x_shifts.append(med_x+prev_x_shift)
-                y_shifts.append(med_y+prev_y_shift)
-                print("[ShiftFinder] ...Shifts: {},{}".format(x_shifts[j], y_shifts[j]))
+            ## Set the previous shift for next loop
+            ## Next image's previous shift is our current shift
+            prev_x_shift = med_shift_x 
+            prev_y_shift = med_shift_y 
 
-                j+= 1
-                
+            print("[ShiftFinder] ...Shifts: {},{}".format(star_shifts[0][j], star_shifts[1][j]))
+            j += 1
+
         
-        #make table of x and y shifts for output
-        table = Table([x_shifts, y_shifts], names = ('xshifts','yshifts'))
         
-        #export shifts as table 
-        table.write(self.config.shift_path, format=self.config.table_format, overwrite=True)
+        ## Write shifts to file
+        np.savetxt(self.config.shift_path, np.transpose(star_shifts))
     
+
 ## TODO: Remove
 #    #I believe this is redundant
 #    def find_shift_between_all_catalogues(self, image_size):  

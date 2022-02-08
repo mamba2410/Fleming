@@ -46,6 +46,7 @@ class Config:
             inner_radius            = 8,
             outer_radius            = 13,
             moving_obj_check_image  = 30,
+            n_reference_stars       = 10,
 
             image_width         = 2432,
             image_height        = 1616,
@@ -105,6 +106,7 @@ class Config:
         self.inner_radius           = inner_radius
         self.outer_radius           = outer_radius
         self.moving_obj_check_image = moving_obj_check_image
+        self.n_reference_stars      = n_reference_stars
 
         self.image_width        = image_width
         self.image_height       = image_height

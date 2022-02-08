@@ -2,6 +2,7 @@ from datetime import datetime
 import Constants
 import os
 import parse
+import numpy as np
 from astropy.io import fits
 
 
@@ -186,6 +187,31 @@ def loop_variables(config, ids, adjusted=False):
         variables_list.append((i, path, s))
 
     return variables_list
+
+
+def read_catalogue(config):
+    """
+    Reads catalogue file and gives a numpy 2d arrya 
+    with named columns
+
+    """
+
+    cat = np.genfromtxt(config.catalogue_path, dtype=[
+        ('id', 'int64'),
+        ('xcentroid', 'float64'),
+        ('ycentroid', 'float64'),
+        ('sharpness', 'float64'),
+        ('roundness1', 'float64'),
+        ('roundness2', 'float64'),
+        ('npix', 'float64'),
+        ('sky', 'float64'),
+        ('peak', 'float64'),
+        ('flux', 'float64'),
+        ('mag', 'float64'),
+        ],
+        skip_header=1)
+
+    return cat
 
 #standard deviation of items in a list
 def standard_deviation(a):
