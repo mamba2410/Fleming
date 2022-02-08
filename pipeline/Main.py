@@ -20,7 +20,7 @@ def main():
     ## Config object for a run of data
     ## See `Constants.py` for available options and default values
     config = Constants.Config(
-        image_dir = "/home/callum/mnt/data/jgtdata/l137_0",
+        image_dir = "/home/callum/mnt/data/jgtdata/l137_0/0121",
         image_prefix = "l137_0",
         has_sets = True,
         set_size = 50,
@@ -46,7 +46,7 @@ def main():
             config.image_format_str
             .format(catalogue_set_number, catalogue_image_number))
 
-    c.catalogue(catalogue_image_path)
+    c.catalogue(catalogue_image_path, solve=False)
     n_sources = c.get_n_sources()
 
     cataloguer_time = Utilities.finished_job("cataloguing stars", reducer_time)

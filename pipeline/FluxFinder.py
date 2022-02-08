@@ -46,9 +46,11 @@ class FluxFinder:
         
 
 
+    ## TODO: Remove
     def find_all_fluxes(self):
         """
         Find the fluxes of each star in each image
+        Nothing happens with the output
         """
         
         #iterate over each image
@@ -123,89 +125,105 @@ class FluxFinder:
 
         # Local background subtraction
 
-        ## TODO: Magic number, use the config ones
         # Define size of background aperture
-        annulus_apertures = CircularAnnulus(
+        background_annuli = CircularAnnulus(
                 positions,
                 r_in=self.config.inner_radius,
                 r_out=self.config.outer_radius)
-        apertures = CircularAperture(positions, r=self.config.inner_radius-1)
-        apers = [apertures, annulus_apertures]
+        star_apertures = CircularAperture(positions, r=self.config.inner_radius-1)
+        all_apertures = [star_apertures, background_annuli]
 
         # find counts in each aperture and annulus
-        phot_table2 = aperture_photometry(image_data, apers)
+        phot_table2 = aperture_photometry(image_data, all_apertures)
 
         n_sources_phot = len(phot_table2['id'])
 
         for col in phot_table2.colnames:
             phot_table2[col].info.format = '%.8g'  # for consistent table output
     
-        # MEAN
-        # Background sub using mean
-            
-        phot_table2['residual_aperture_sum_mean'] = phot_table2['aperture_sum_1']*0 - 1
-        phot_table2['mean'] = phot_table2['aperture_sum_1']*0 - 1
 
+        ## Clear columns
+        phot_table2['mean'] = phot_table2['aperture_sum_1']*0 - 1
+        phot_table2['median'] = phot_table2['aperture_sum_1']*0 - 1
+        phot_table2['residual_aperture_sum_mean'] = phot_table2['aperture_sum_1']*0 - 1
+        phot_table2['residual_aperture_sum_med'] = phot_table2['aperture_sum_1']*0 - 1
 
         for i in range(n_sources_phot):
             
             x, y = positions[i]
 
             #check that largest aperture does not exceed the boundaries of the image
-            if Utilities.is_within_boundaries(x, y, x_max, y_max, 15):
+            if Utilities.is_within_boundaries(x, y, x_max, y_max, self.config.outer_radius):
 
                 # Calc the mean background in the second aperture ring
-                bkg_mean = phot_table2['aperture_sum_1'][i] / annulus_apertures.area
+                bkg_mean = phot_table2['aperture_sum_1'][i] / background_annuli[i].area
                 phot_table2['mean'][i] = bkg_mean
                 
                 # Calc background level in each main aperture and subtract
-                bkg_sum = bkg_mean * apertures.area
+                bkg_sum = bkg_mean * star_apertures[i].area
                 final_sum = phot_table2['aperture_sum_0'][i] - bkg_sum
                 phot_table2['residual_aperture_sum_mean'][i] = final_sum
-        
+
+                # Calc background median
+                ann_mask = background_annuli[i].to_mask(method='center')
+                weighted_data = ann_mask.multiply(image_data)
+                phot_table2['median'][i] = np.median(weighted_data[weighted_data != 0])
+
+                # Calc 
+                bkg_med = phot_table2['median'][i]
+                bkg_sum = bkg_med * star_apertures[i].area
+                final_sum = phot_table2['aperture_sum_0'][i] - bkg_sum
+                phot_table2['residual_aperture_sum_med'][i] = final_sum
+
+
+            else:
+                print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
+                        .format(i, x_max, y_max, x, y))
+
         phot_table2['residual_aperture_sum_mean'].info.format = '%.8g'  # for consistent table output
+        phot_table2['residual_aperture_sum_med'].info.format = '%.8g'  # for consistent table output
                 
         # MEDIAN
 
         # Background sub using median
-        phot_table2['median'] = phot_table2['aperture_sum_1']*0 - 1
-        phot_table2['residual_aperture_sum_med'] = phot_table2['aperture_sum_1']*0 - 1
+        #phot_table2['median'] = phot_table2['aperture_sum_1']*0 - 1
+        #phot_table2['residual_aperture_sum_med'] = phot_table2['aperture_sum_1']*0 - 1
 
 
-        #for each source
-        for q in range(n_sources_phot):
-            x, y = positions[q]
+        ##for each source
+        #for q in range(n_sources_phot):
+        #    x, y = positions[q]
  
-            xypos = (x, y)
+        #    xypos = (x, y)
 
-            ## TODO: Magic number
-            #check that largest aperture does not exceed the boundaries of the image
-            if Utilities.is_within_boundaries(x, y, x_max, y_max, 15):
-                annulus = CircularAnnulus(
-                        xypos,
-                        r_in=self.config.inner_radius, 
-                        r_out=self.config.outer_radius)
-                ann_mask = annulus.to_mask(method='center')
-                #print(ann_mask)
-                weighted_data = ann_mask.multiply(image_data)
-                print(weighted_data)
-                phot_table2['median'][q] = np.median(weighted_data[weighted_data != 0])
+        #    ## TODO: Magic number
+        #    #check that largest aperture does not exceed the boundaries of the image
+        #    if Utilities.is_within_boundaries(x, y, x_max, y_max, 15):
+        #        annulus = CircularAnnulus(
+        #                xypos,
+        #                r_in=self.config.inner_radius, 
+        #                r_out=self.config.outer_radius)
+        #        ann_mask = annulus.to_mask(method='center')
+        #        #print(ann_mask)
+        #        weighted_data = ann_mask.multiply(image_data)
+        #        print(weighted_data)
+        #        phot_table2['median'][q] = np.median(weighted_data[weighted_data != 0])
 
-                
-                # Calc the median background in the second aperture ring
-                bkg_med = phot_table2['median'][q]
-            
-                # Calc background level in each main aperture and subtract
-                bkg_sum = bkg_med * apertures.area
-                final_sum = phot_table2['aperture_sum_0'][q] - bkg_sum
-            
-            
-                phot_table2['residual_aperture_sum_med'][q] = final_sum
-            else:
-                print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
-                        .format(q, x_max, y_max, x, y))
-        
-        phot_table2['residual_aperture_sum_med'].info.format = '%.8g'  # for consistent table output
+        #        
+        #        # Calc the median background in the second aperture ring
+        #        bkg_med = phot_table2['median'][q]
+        #    
+        #        # Calc background level in each main aperture and subtract
+        #        bkg_sum = bkg_med * apertures.area
+        #        final_sum = phot_table2['aperture_sum_0'][q] - bkg_sum
+        #    
+        #    
+        #        phot_table2['residual_aperture_sum_med'][q] = final_sum
+        #    else:
+        #        print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
+        #                .format(q, x_max, y_max, x, y))
+        #
+        #phot_table2['residual_aperture_sum_med'].info.format = '%.8g'  # for consistent table output
         
         return phot_table2
         
@@ -244,6 +262,8 @@ class FluxFinder:
                     #date_and_time = times[(set-1) * self.set_size * 2 + (2*i-2)]
                     date_and_time = times[(s-1)*self.config.set_size + i-1]
                     
+
+                    ## TODO: use datetime here
                     #just interested in time part of date and time for now
                     time = date_and_time.split("T")[1]
                     
@@ -346,7 +366,10 @@ class FluxFinder:
             Has the lighth curve been divided by the average flux?
 
         """
-        print("[FluxFinder] Plotting light curve for source {}".format(source_id))
+
+        print("[FluxFinder] Plotting light curve for source {} (adjusted={})"
+                .format(source_id, adjusted))
+
         
         if curve_path == None:
             fname = self.config.source_format_str.format(source_id)
@@ -391,8 +414,6 @@ class FluxFinder:
             plt.title("Light curve for unknown source (id {}) (adjusted={})"
                 .format(source_id, adjusted))
             
-        print("[FluxFinder] Making light curve for source {} (adjusted={})"
-                .format(source_id, adjusted))
         if show:
             plt.show()
 
@@ -404,7 +425,7 @@ class FluxFinder:
         
     def plot_all_light_curves(self, ids, adjusted=False, show=False):
         for _i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
-            self.plot_light_curve(curve_path=path, adjusted=adjusted, show=show)
+            self.plot_light_curve(source_id=source_id, curve_path=path, adjusted=adjusted, show=show)
 
 
     def plot_avg_light_curve(self, curve_path, adjusted=False, show=False):
