@@ -129,10 +129,10 @@ class Config:
         self.catalogue_path = os.path.join(self.workspace_dir, fname)
 
         if self.has_sets:
-            self.image_format_str = "{}_{}_{}{}".format(
-                    image_prefix, "{:1}", "{:03}", fits_extension)
-            self.raw_image_format_str = "{}{}_{}_{}{}".format(
+            self.image_format_str = "{}{}_{}_{}{}".format(
                     reduced_prefix, image_prefix, "{:1}", "{:03}", fits_extension)
+            self.raw_image_format_str = "{}_{}_{}{}".format(
+                    image_prefix, "{:1}", "{:03}", fits_extension)
         else:
             self.image_format_str = "{}{}_{}{}".format(
                     reduced_prefix, image_prefix, "{:04}", fits_extension)
