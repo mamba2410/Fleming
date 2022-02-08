@@ -14,21 +14,12 @@ import Constants
 class Cataloguer:
     """
     Cataloguer class
-    ----------
+
+
     """
 
     config = None           # Config object
     n_sources = 0           # Number of sources
-
-    means = []
-    stds = []
-    var_means = []
-    var_stds = []
-    mean_bins = []
-    avgs = []
-    
-    id_map = []
-    solve = True        ## debug, solve astrometry_net plate
     wcs = None          ## TODO: Do something with this
 
     
@@ -57,8 +48,6 @@ class Cataloguer:
 
         """
 
-        self.solve = solve
-
         #read in image data
         image_data = fits.getdata(image_path, ext=0)
         
@@ -75,28 +64,13 @@ class Cataloguer:
         #Utilities.make_reg_file(self.config.workspace_dir, self.config.image_prefix, sources)
         
         #add the RA and DEC for each star to the catalogue
-        self.convert_to_ra_and_dec(image_path, sources)
+        self.convert_to_ra_and_dec(image_path, sources, solve=solve)
         
         #write the catalogue to the catalogue file
         sources.write(self.config.catalogue_path, format=self.config.table_format, overwrite=True)
-        
 
-        ## TODO: Move
-        ## Get a list of the times of each measurement
+        return self.n_sources
 
-        ## Clear time file
-        if(os.path.exists(self.config.time_path)):
-            open(self.config.time_path, "w").close()
-
-    
-        #loop through all images within each set 
-        for f, _s, _i in Utilities.loop_images(self.config):
-            
-            #build image filepath 
-            image_file = os.path.join(self.config.image_dir, f)
-            
-            #store the time which the current image was taken
-            self.add_times(fits.getheader(image_file))
     
 
 
@@ -139,7 +113,7 @@ class Cataloguer:
 
     ## TODO: Add RA/DEC to sources table
     ##       and have error checking for astrometry wcs
-    def convert_to_ra_and_dec(self, image_file, sources=None):
+    def convert_to_ra_and_dec(self, image_file, sources, solve=True):
         """
         Converts all the source positions in the image to RA and DEC.
         Uses World Coordinate System (wcs) from the fits image.
@@ -149,7 +123,7 @@ class Cataloguer:
         print("[Cataloguer] Getting coordinate system for image '{}'".format(image_file))
 
         # find the wcs assosiated with the fits image using astropy and the header
-        self.wcs = self.get_wcs_header(image_file)
+        self.wcs = self.get_wcs_header(image_file, solve=solve)
         
         ## make two new coloums of 0's
         #sources['RA'] = sources['xcentroid'] * 0
@@ -164,150 +138,9 @@ class Cataloguer:
 
 
 
-    ## TODO: Combine with end of catalogue()
-    def add_times(self, image_header):
-        """
-        Add the time of the specified image file being taken to the times file
-
-        Parameters
-        ----------
-
-        image_header: fits header for image to add
-        """
-        
-        #open time file in appending mode 
-        with open(self.config.time_path, "a+") as f:
-            #write date of observation to file 
-            f.write("{}{}".format(image_header['DATE-OBS'], self.config.line_ending))
-        
-
-
     
-    
-    ## TODO: Remove, duplicate of DataAnalyser
-    def get_means_and_stds(self, adjusted=False):
-        """
-        Find the means and standard deviations of all light curves generated.
-
-        Parameters
-        ==========
-
-        adjusted: bool
-            Has the light curves been adjusted (divided by average)
-
-        """
-        
-        self.means = []
-        self.stds = []
-        
-        cat = Table.read(self.config.catalogue_path, format=self.config.table_format)
-        
-        if adjusted:
-            light_curve_dir = self.config.adjusted_curve_dir
-            print("[Cataloguer] Using adjusted light curves")
-        else:
-            light_curve_dir = self.config.light_curve_dir
-            print("[Cataloguer] Using non-adjusted light curves")
-    
-
-        #for each image file in the light curve directory 
-        for path, source_id in Utilities.list_sources(self.config):
-    
-            #read light curve data from file
-            t = Table.read(path, format=self.config.table_format)
-            
-                            
-            ## TODO: Magic number
-            #only plot data point if at least 5 non-zero counts are recorded
-            if len(t['counts']) > 100:
-                mean = Utilities.mean(t['counts'])
-                std = Utilities.standard_deviation(t['counts'])
-                value = std/mean
-                
-                # ??? Magic numbers
-                if value > 0 and value < 2 and mean > 0.02 and mean < 80:
-                    self.stds.append(value)
-                    self.means.append(mean)
-            
-                    self.id_map.append(str(source_id))
-            
-                #if Utilities.is_above_line(std, mean, 17, 0, 0.05) and mean > 50:
-                #if value < 0.01 and mean > 3:
-                    #print(file.split("id")[1].split(".")[0],Utilities.mean(t['counts']))
-        
-        #compile results into single array
-        a = [self.means, self.stds, self.id_map]
-        #sort results by decreasing variability 
-        Utilities.quicksort(a, True)
-
-        ## TODO: Do something with this array
-    
-
-
-
-    ## TODO: Remove, duplicate of DataAnalyser
-    def plot_means_and_stds(self, show=False):
-        """
-        Plot the means and standard deviations of all light curves generated.
-
-        Parameters
-        ----------
-
-        show: bool, optional. Show plot to user.
-        """
-
-        plt.scatter(self.means, self.stds, marker='.')
-        plt.scatter(self.var_means, self.var_stds, marker='.', color='red')
-        plt.xlabel("Mean [counts]")
-        plt.ylabel("Standard deviation [counts]")
-        plt.title("Mean against standard deviation for each source in catalogue {}"
-                .format(self.config.image_prefix))
-
-        #ensure plot y axis starts from 0
-        plt.xlim(80, 0)
-        plt.gca().set_ylim(bottom=0)
-        
-
-        # Save image to file
-        fname = "{}_mean_std{}".format(self.config.image_prefix, self.config.plot_file_extension)
-        path = os.path.join(self.config.output_dir, fname)
-        plt.savefig(path)
-
-        if show:
-            plt.show()
-
-        plt.close()
-    
-
-    ## TODO: Remove, duplicate of DataAnalyser
-    def get_ids_for_avg(self):
-        """
-        Find IDs of stars with high brightness to produce average light curve.
-        The average light curve is subtracted from each printed light curve to reduce bias
-        """
-        print("[DEBUG] Calling `get_ids_for_avg` in Cataloguer")
-        
-        ids = []
-        
-        for i in range(len(self.means)):
-            if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
-       
-                fname = self.config.source_format_str.format(self.id_map[i])
-                light_curve_path = os.path.join(self.config.light_curve_dir, fname)
-                t = Table.read(light_curve_path, format=self.config.table_format)
-                
-                # Add it if we have all time points
-                # TODO: Add a >= 0.8* n?
-                if len(t['time']) == self.config.set_size * self.config.n_sets:
-                    ids.append(self.id_map[i])
-    
-        return ids
-        
-        
-
-
     ## TODO: Add threshold and FWHM and make config variables
-    def get_wcs_header(self, file):
+    def get_wcs_header(self, file, solve=True):
         """
         Get World Coordinate System header.
         [Astroquery docs.](https://astroquery.readthedocs.io/en/latest/astrometry_net/astrometry_net.html)
@@ -328,7 +161,7 @@ class Cataloguer:
         ast.api_key = self.config.api_key
     
         wcs = None
-        if not self.solve:
+        if not solve:
             return WCS(header=wcs)
     
         print("[Astrometry] Starting job")
@@ -346,10 +179,34 @@ class Cataloguer:
             
         ## TODO: Gives warning with no image data
         return WCS(header=wcs)
-            
 
-    def get_n_sources(self):
-        return self.n_sources
+
+
+
+    def generate_image_times(self):
+        """
+        Get a list of times of each measurement
+
+        """
+
+        print("[Cataloguer] Generating image time file")
+        ## Clear time file if it exists
+        if(os.path.exists(self.config.time_path)):
+            open(self.config.time_path, "w").close()
+
+        ## Open time file
+        with open(self.config.time_path, "a+") as time_file:
+    
+            #loop through all images within each set 
+            for image_name, _s, _i in Utilities.loop_images(self.config):
+            
+                image_file = os.path.join(self.config.image_dir, image_name)
+                image_header = fits.getheader(image_file)
+
+                ## Write time to file
+                time_file.write("{}{}".format(
+                            image_header['DATE-OBS'],
+                            self.config.line_ending))
 
         
 ## End of class
