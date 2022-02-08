@@ -42,7 +42,7 @@ class Cataloguer:
         self.config = config
 
 
-    def catalogue(self, image_path, solve=True):
+    def generate_catalogue(self, image_path, solve=True):
         """
         Generates a catalogue of all the stars in the given image, as well as
         a list of the times at which each image was taken.
@@ -52,7 +52,7 @@ class Cataloguer:
         image_path: string
             path to the fits image to catalogue all the stars.
         solve: bool, optional
-            should solve astrometry.net wcs
+            should solve astrometry.net wcs?
 
 
         """
@@ -62,16 +62,17 @@ class Cataloguer:
         #read in image data
         image_data = fits.getdata(image_path, ext=0)
         
-        ## TODO: Magic number
+        ## TODO: Magic number, threshold passed to find_stars
         #build a catalogue of all stars in the image
         sources = find_stars(image_data, 5)
-        self.remove_stars(sources, image_data)
+        self.filter_stars(sources, image_data)
         self.n_sources = len(sources['id'])
 
+        print("[Cataloguer] Found {} suitable sources".format(self.n_sources))
+
         ## Write all sources to a file
-        Utilities.make_reg_file(self.config.workspace_dir, self.config.image_prefix, sources)
-        
-        print("[Cataloguer] Catalogued {} objects".format(self.n_sources))
+        ## TODO: Necessary?
+        #Utilities.make_reg_file(self.config.workspace_dir, self.config.image_prefix, sources)
         
         #add the RA and DEC for each star to the catalogue
         self.convert_to_ra_and_dec(image_path, sources)
@@ -79,6 +80,10 @@ class Cataloguer:
         #write the catalogue to the catalogue file
         sources.write(self.config.catalogue_path, format=self.config.table_format, overwrite=True)
         
+
+        ## TODO: Move
+        ## Get a list of the times of each measurement
+
         ## Clear time file
         if(os.path.exists(self.config.time_path)):
             open(self.config.time_path, "w").close()
@@ -86,34 +91,36 @@ class Cataloguer:
     
         #loop through all images within each set 
         for f, _s, _i in Utilities.loop_images(self.config):
-                
-                #build image filepath 
-                if self.config.has_sets:
-                    image_file = os.path.join(self.config.image_dir, f)
-                else:
-                    image_file = os.path.join(self.config.image_dir, f)
-                
-                #store the time which the current image was taken
-                self.add_times(fits.getheader(image_file))
+            
+            #build image filepath 
+            image_file = os.path.join(self.config.image_dir, f)
+            
+            #store the time which the current image was taken
+            self.add_times(fits.getheader(image_file))
     
 
 
-    def remove_stars(self, sources, image_data):
+    def filter_stars(self, sources, image_data):
         """
         Removes stars from a source catalogue given cutoff parameters
         from the config object
+
+        sources: Table
+            
+        image_data: 
+            
         """
         
         to_remove = []
                 
-        for i in range(len(sources)):
+        for i in range(self.n_sources):
             
             is_too_bright = sources['flux'][i] > self.config.flux_cutoff
             is_within_boundaries = Utilities.is_within_boundaries(
                     sources['xcentroid'][i],
                     sources['ycentroid'][i],
-                    len(image_data[0]),
-                    len(image_data),
+                    self.config.image_width,
+                    self.config.image_height,
                     self.config.edge_limit)
 
             if is_too_bright or not is_within_boundaries:
@@ -125,15 +132,18 @@ class Cataloguer:
             sources.remove_row(to_remove[i] - i)
     
             
-        print("[Cataloguer] filtered out {} objects".format(len(to_remove)))
+        print("[Cataloguer] Filtered out {} objects".format(len(to_remove)))
         
 
 
 
+    ## TODO: Add RA/DEC to sources table
+    ##       and have error checking for astrometry wcs
     def convert_to_ra_and_dec(self, image_file, sources=None):
         """
         Converts all the source positions in the image to RA and DEC.
         Uses World Coordinate System (wcs) from the fits image.
+
         """
         
         print("[Cataloguer] Getting coordinate system for image '{}'".format(image_file))
@@ -154,6 +164,7 @@ class Cataloguer:
 
 
 
+    ## TODO: Combine with end of catalogue()
     def add_times(self, image_header):
         """
         Add the time of the specified image file being taken to the times file
@@ -173,6 +184,7 @@ class Cataloguer:
 
     
     
+    ## TODO: Remove, duplicate of DataAnalyser
     def get_means_and_stds(self, adjusted=False):
         """
         Find the means and standard deviations of all light curves generated.
@@ -233,6 +245,7 @@ class Cataloguer:
 
 
 
+    ## TODO: Remove, duplicate of DataAnalyser
     def plot_means_and_stds(self, show=False):
         """
         Plot the means and standard deviations of all light curves generated.
@@ -266,7 +279,7 @@ class Cataloguer:
         plt.close()
     
 
-    ## TODO: Magic numbers, make this more config friendly
+    ## TODO: Remove, duplicate of DataAnalyser
     def get_ids_for_avg(self):
         """
         Find IDs of stars with high brightness to produce average light curve.
