@@ -20,6 +20,7 @@ class FluxFinder:
     
     #catalogue of image 1
     catalogue = None
+    n_sources= None
     
     #time at which first image was taken
     obs_start_time = []
@@ -37,28 +38,13 @@ class FluxFinder:
         self.config = config
         self.n_sources = n_sources
         
-        self.catalogue = Table.read(self.config.catalogue_path, format=config.table_format)
+        self.catalogue = Utilities.read_catalogue(self.config)
+        self.x_shifts, self.y_shifts = np.genfromtxt(self.config.shift_path).transpose()
 
-        t = Table.read(self.config.shift_path, format=self.config.table_format)
-        self.x_shifts = t['xshifts']
-        self.y_shifts = t['yshifts']
-
-        
+        ## TODO: Sanity check if catalogue ahs same number of sources
+        ## as arg passed
 
 
-    ## TODO: Remove
-    def find_all_fluxes(self):
-        """
-        Find the fluxes of each star in each image
-        Nothing happens with the output
-        """
-        
-        #iterate over each image
-        for _, s, i in Utilities.loop_images(self.config):
-            print("[FluxFinder] Finding fluxes for image: set {:1}; image {:03}".format(s, i))
-            self.find_fluxes(s, i)
-                
-    
 
     def get_total_shift(self, set_number=0, image_number=0):
         """
@@ -113,15 +99,12 @@ class FluxFinder:
         x = self.catalogue['xcentroid'] + x_shift
         y = self.catalogue['ycentroid'] + y_shift
         
-        positions = []
-        
-        for i in range(len(x)):
-            positions.append((x[i], y[i]))
-            
+
+        positions = np.array([x, y]).transpose()
         
         image_data = Utilities.get_image(self.config, set_number, image_number)[0].data
-        x_max = len(image_data[0])
-        y_max = len(image_data)
+        x_max = self.config.image_width
+        y_max = self.config.image_height
 
         # Local background subtraction
 
@@ -138,11 +121,15 @@ class FluxFinder:
 
         n_sources_phot = len(phot_table2['id'])
 
+        if n_sources_phot != self.n_sources:
+            print("[FluxFinder] Warn: Aperture photometry found {} sources, self has {}"
+                    .format(n_sources_phot, self.n_sources))
+
         for col in phot_table2.colnames:
             phot_table2[col].info.format = '%.8g'  # for consistent table output
     
 
-        ## Clear columns
+        ## Set new columns to -1
         phot_table2['mean'] = phot_table2['aperture_sum_1']*0 - 1
         phot_table2['median'] = phot_table2['aperture_sum_1']*0 - 1
         phot_table2['residual_aperture_sum_mean'] = phot_table2['aperture_sum_1']*0 - 1
@@ -176,9 +163,10 @@ class FluxFinder:
                 phot_table2['residual_aperture_sum_med'][i] = final_sum
 
 
-            else:
-                print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
-                        .format(i, x_max, y_max, x, y))
+            ### For debug purposes
+            #else:
+            #    print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
+            #            .format(i, x_max, y_max, x, y))
 
         phot_table2['residual_aperture_sum_mean'].info.format = '%.8g'  # for consistent table output
         phot_table2['residual_aperture_sum_med'].info.format = '%.8g'  # for consistent table output
@@ -246,7 +234,7 @@ class FluxFinder:
                 
         for _, s, i in Utilities.loop_images(self.config):
                 #print("Finding fluxes in image {}".format(str((set-1)*self.set_size + i)))
-                print("[FluxFinder] Making light curve for image: set {:1}; image: {:03}".format(s, i))
+                #print("[FluxFinder] Making light curve for image: set {:1}; image: {:03}".format(s, i))
                 
                 t = self.find_fluxes(s, i)
                                 
