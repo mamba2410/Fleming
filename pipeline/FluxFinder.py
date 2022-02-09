@@ -42,7 +42,7 @@ class FluxFinder:
         self.catalogue = Utilities.read_catalogue(self.config)
         self.x_shifts, self.y_shifts = np.genfromtxt(self.config.shift_path).transpose()
 
-        ## TODO: Sanity check if catalogue ahs same number of sources
+        ## TODO: Sanity check if catalogue has same number of sources
         ## as arg passed
 
 
@@ -76,7 +76,6 @@ class FluxFinder:
     
     
 
-    ## TODO: Magic numbers
     def find_fluxes(self, set_number=0, image_number=0):
         """
         Find the fluxes of all stars in a given image
@@ -174,55 +173,10 @@ class FluxFinder:
         phot_table2['residual_aperture_sum_mean'].info.format = '%.8g'  # for consistent table output
         phot_table2['residual_aperture_sum_med'].info.format = '%.8g'  # for consistent table output
                 
-        # MEDIAN
-
-        # Background sub using median
-        #phot_table2['median'] = phot_table2['aperture_sum_1']*0 - 1
-        #phot_table2['residual_aperture_sum_med'] = phot_table2['aperture_sum_1']*0 - 1
-
-
-        ##for each source
-        #for q in range(n_sources_phot):
-        #    x, y = positions[q]
- 
-        #    xypos = (x, y)
-
-        #    ## TODO: Magic number
-        #    #check that largest aperture does not exceed the boundaries of the image
-        #    if Utilities.is_within_boundaries(x, y, x_max, y_max, 15):
-        #        annulus = CircularAnnulus(
-        #                xypos,
-        #                r_in=self.config.inner_radius, 
-        #                r_out=self.config.outer_radius)
-        #        ann_mask = annulus.to_mask(method='center')
-        #        #print(ann_mask)
-        #        weighted_data = ann_mask.multiply(image_data)
-        #        print(weighted_data)
-        #        phot_table2['median'][q] = np.median(weighted_data[weighted_data != 0])
-
-        #        
-        #        # Calc the median background in the second aperture ring
-        #        bkg_med = phot_table2['median'][q]
-        #    
-        #        # Calc background level in each main aperture and subtract
-        #        bkg_sum = bkg_med * apertures.area
-        #        final_sum = phot_table2['aperture_sum_0'][q] - bkg_sum
-        #    
-        #    
-        #        phot_table2['residual_aperture_sum_med'][q] = final_sum
-        #    else:
-        #        print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
-        #                .format(q, x_max, y_max, x, y))
-        #
-        #phot_table2['residual_aperture_sum_med'].info.format = '%.8g'  # for consistent table output
-        
         return phot_table2
         
 
 
-    
-
-    ## TODO: Closer look
     ## TODO: Breaks if no sets
     def make_light_curves(self):
         if self.config.has_sets == False:
@@ -241,7 +195,7 @@ class FluxFinder:
         light_curves = np.zeros((self.n_sources, 2, n_times))
           
         ## iterate over each image
-        ## Image_index iterates over each measurement
+        ## image_index iterates over each measurement
         ## j iterates over source index
         image_index = 0
         for _, s, i in Utilities.loop_images(self.config):
@@ -253,7 +207,6 @@ class FluxFinder:
             for j in range(self.n_sources):
                     
                 #get time matching the image
-                #date_and_time = times[(set-1) * self.set_size * 2 + (2*i-2)]
                 date_and_time = times[image_index]
 
                 ## TODO: Make time format a config param
@@ -264,13 +217,11 @@ class FluxFinder:
                 
                 #if median has reasonable value
                 if source_table['median'][j] > 0: 
-                    #light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
                     light_curves[j][0][image_index] = seconds_elapsed
                     light_curves[j][1][image_index] = float(source_table['residual_aperture_sum_med'][j])
                 #else:
                 #    print("[FluxFinder] Rejecting value for source {}, median is {}"
                 #            .format(t['id'][j], t['median'][j]))
-                #light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
             image_index += 1
 
         #loop through all light curves, writing them out to a file
@@ -281,42 +232,11 @@ class FluxFinder:
 
             ## Write light curve
             ## Transpose to have columns
-            ## Only one light curve per fiel
+            ## Only one light curve per file
             np.savetxt(path, light_curves[j].transpose())
     
     
     
-    def map_id(self, id2, cat1, cat2, shifts, set_number):
-        """
-        Find ID of a star from catalogue 2 in catalogue 1
-        Expects everything in Table objects
-
-        """
-        
-        x_shift = 0
-        y_shift = 0
-        
-        #find total shift between catalogues
-        for i in range(set_number-1):
-            x_shift += shifts['xshifts'][i]
-            y_shift += shifts['yshifts'][i]
-        
-        #find expected position of star in catalogue 1 with id 'id2' in
-        #the second catalogue
-        expected_x = cat2['xcenter'][id2] - x_shift
-        expected_y = cat2['ycenter'][id2] - y_shift
-        
-        #get x-y coords of stars in catalogue 1
-        x1s = cat1['xcentroid']
-        y1s = cat1['ycentroid']
-        
-        #find matching star id in catalogue 1 - error of 0.01 seems very large
-        #perhaps implement iterative search? (increasing error if required)
-        for i in range(len(x1s)):
-            if Utilities.equals(expected_x, x1s[i], 0.01) and Utilities.equals(expected_y, y1s[i], 0.01):
-                return i
-            
-        return None
             
         
         
@@ -404,6 +324,7 @@ class FluxFinder:
     def plot_avg_light_curve(self, curve_path, adjusted=False, show=False):
         self.plot_light_curve(source_id=None, curve_path=curve_path, adjusted=adjusted, show=show)
     
+
     ## TODO: Duplicate somewhere else
     #use median
     def make_avg_curve(self, ids):
@@ -497,8 +418,6 @@ class FluxFinder:
 
         
 
-
-
     ## TODO: Use set_number and image_number
     def get_thumbnail(self, image_n, x, y, size, add_shift=True):
         """
@@ -521,7 +440,6 @@ class FluxFinder:
             
         set_number = int((image_n-1) / self.config.set_size) + 1
         if add_shift:
-            #x_shift, y_shift = self.get_total_shift(n, set_number)
             x_shift, y_shift = self.get_total_shift(set_number=set_number, image_number=n)
         else:
             x_shift = 0
@@ -559,195 +477,36 @@ class FluxFinder:
         return image[ly:ry, lx:rx] # note your x,y coords need to be an int
 
 
-# =============================================================================
-#     #find the fluxes of all stars ina given image
-#     def find_fluxes(self, image_number, set):
-# 
-#         #get total shift from first image to this one
-#         x_shift, y_shift = self.get_total_shift(image_number, set)
-#         
-#         #add the shift onto the positions of the stars in the first image
-#         #to find their positions in this image
-#         x = self.catalogue['xcentroid'] + x_shift
-#         y = self.catalogue['ycentroid'] + y_shift
-#         
-#         positions = (x, y) 
-#         
-#         # Shape and size of aperture object
-#         apertures = CircularAperture(positions, r=9) 
-#         
-#         #build path to image 
-#         data_path = self.directory + self.config.working_directory + self.config.image_directory + self.config.reduced_prefix + self.image_names
-#         if not self.has_sets:
-#             data_path += "000" + str(image_number)
-#         else:
-#             data_path += "_" + str(set) + "_" + Utilities.format_index(image_number)
-#         
-#         data_path += self.config.fits_extension
-#             
-#         #read in image data
-#         image_data = fits.getdata(data_path, ext = 0)
-#                 
-#         # Local background subtraction
-# 
-#         # Define size of background aperture
-#         annulus_apertures = CircularAnnulus(positions, r_in=10, r_out=15)
-#         apertures = CircularAperture(positions, r=9)
-#         apers = [apertures, annulus_apertures]
-# 
-#         # find counts in each aperture and annulus
-#         phot_table2 = aperture_photometry(image_data, apers)
-# 
-#         for col in phot_table2.colnames:
-#             phot_table2[col].info.format = '%.8g'  # for consistent table output
-#     
-#         # MEAN
-#         # Background sub using mean
-#             
-#         phot_table2['residual_aperture_sum_mean'] = phot_table2['aperture_sum_1']*0 - 1
-#         phot_table2['mean'] = phot_table2['aperture_sum_1']*0 - 1
-# 
-# 
-#         for i in range(len(phot_table2)):
-#             
-#             x = positions[0][i]
-#             y = positions[1][i]
-#             
-#             
-#             #check that largest aperture does not exceed the boundaries of the image
-#             if Utilities.is_within_boundaries(x, y, len(image_data[0]), len(image_data), 15):
-#             
-#                 # Calc the mean background in the second aperture ring
-#                 bkg_mean = phot_table2['aperture_sum_1'][i] / annulus_apertures.area()
-#                 phot_table2['mean'][i] = bkg_mean
-#                 
-#                 # Calc background level in each main aperture and subtract
-#                 bkg_sum = bkg_mean * apertures.area()
-#                 final_sum = phot_table2['aperture_sum_0'][i] - bkg_sum
-#                 phot_table2['residual_aperture_sum_mean'][i] = final_sum
-#         
-#         phot_table2['residual_aperture_sum_mean'].info.format = '%.8g'  # for consistent table output
-#                 
-#         # MEDIAN
-# 
-#         # Background sub using median
-#         phot_table2['median'] = phot_table2['aperture_sum_1']*0 - 1
-#         phot_table2['residual_aperture_sum_med'] = phot_table2['aperture_sum_1']*0 - 1
-# 
-# 
-#         #for each source
-#         for q in range(0,len(phot_table2)):
-#             x = positions[0][q]
-#             y = positions[1][q]   
-#             xypos = (x, y)
-#             
-#             #check that largest aperture does not exceed the boundaries of the image
-#             if Utilities.is_within_boundaries(x, y, len(image_data[0]), len(image_data), 15):
-#                 annulus = CircularAnnulus(xypos, r_in=10, r_out=15)
-#                 ann_mask = annulus.to_mask(method='center')[0]
-#                 weighted_data = ann_mask.multiply(image_data)
-#                 phot_table2['median'][q] = np.median(weighted_data[weighted_data != 0])
-#                 
-#                 # Calc the median background in the second aperture ring
-#                 bkg_med = phot_table2['median'][q]
-#             
-#                 # Calc background level in each main aperture and subtract
-#                 bkg_sum = bkg_med * apertures.area()
-#                 final_sum = phot_table2['aperture_sum_0'][q] - bkg_sum
-#             
-#             
-#                 phot_table2['residual_aperture_sum_med'][q] = final_sum
-#         
-#         phot_table2['residual_aperture_sum_med'].info.format = '%.8g'  # for consistent table output
-#         
-#         #build path for flux table output
-#         out_path = self.flux_dir + self.config.flux_prefix + self.image_names
-#         
-#         if not self.has_sets:
-#             out_path += "000" + str(image_number)
-#         else:
-#             out_path += "_" + str(set) + "_" + Utilities.format_index(image_number)
-#             
-#         out_path += self.config.standard_file_extension
-#         phot_table2.write(out_path,  format = self.config.table_format, overwrite = True)
-#         
-#     def make_light_curves(self):
-#         
-#         #get time of observation for each image
-#         times_file = self.directory + self.config.working_directory + self.config.time_file
-#         
-#         times = [line.rstrip('\n') for line in open(times_file)]
-#         
-#         light_curves = []
-#           
-#         #iterate over each flux table
-#         for set in range(1, self.n_sets+1):
-#             for i in range(1, self.set_size + 1):
-#                 print(i)
-#                 
-#                 #build flux path
-#                 file = self.flux_dir + self.config.flux_prefix + self.image_names
-#                 if not self.has_sets:
-#                     file += "000" + str(i) 
-#                 else:
-#                     file += "_" + str(set) + "_" + Utilities.format_index(i)
-#                 file += self.config.standard_file_extension
-#                 
-#                 #read flux data
-#                 t = Table.read(file, format = self.config.table_format)
-#                 
-#                 #iterate through each source in the table
-#                 for j in range(len(t['id'])):
-#                     
-#                     #add table objects to the light curves array when it is
-#                     #empty
-#                     if i == 1 and set == 1:
-#                         light_curves.append(Table(names = ('time','counts')))
-#                         
-#                     #get time matching the image
-#                     date_and_time = times[(set-1) * self.set_size + (i-1)]
-#                     
-#                     #just interested in time part of date and time for now
-#                     time = date_and_time.split("T")[1]
-#                     
-#                     #split time into hours, minutes and seconds
-#                     time_split = time.split(":")
-#                     time_split[0] = int(time_split[0])
-#                     time_split[1] = int(time_split[1])
-#                     time_split[2] = int(time_split[2])
-#                     
-#                     #if the observation start time is empty, add the current
-#                     #time in hours minutes and seconds 
-#                     if len(self.obs_start_time) == 0:
-#                         self.obs_start_time = time_split
-#                     
-#                     #get difference between time of start and time of 
-#                     #observation of current image, in hours minutes and seconds
-#                     time_elapsed_hms = Utilities.diff(time_split, self.obs_start_time)
-#                     
-#                     #if the hours value is positive this observation was taken before midnight
-#                     #the time elapsed from the start would be negative as the hour value
-#                     #woudl reset to 0
-#                     if time_elapsed_hms[0] >= 0:
-#                         #get time elapsed in seconds
-#                         time_elapsed = time_elapsed_hms[0] * 3600 + time_elapsed_hms[1] * 60 + time_elapsed_hms[2]
-#                     else:
-#                         time_elapsed_hms_till_midnight = Utilities.diff([23, 59, 60], self.obs_start_time)
-#                         time_elapsed = time_elapsed_hms_till_midnight[0] * 3600 + time_elapsed_hms_till_midnight[1] * 60 + time_elapsed_hms_till_midnight[2]
-#                         time_elapsed += time_split[0] * 3600 + time_split[1] * 60 + time_split[0]
-#                         
-#                     
-#                     #if median has reasonable value
-#                     if t['median'][j] > 0: 
-#                         light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
-#                         
-# 
-#         #loop through all light curves, writing them out to a file
-#         for j in range(len(light_curves)):
-#             #build light curve path
-#             file = self.light_curve_dir + self.image_names + self.config.identifier + str(j+1) + self.config.standard_file_extension
-#            
-#             table = light_curves[j]
-#             table.write(file, format = self.config.table_format, overwrite=True)
-#             
-# =============================================================================
+
+    def map_id(self, id2, cat1, cat2, shifts, set_number):
+        """
+        Find ID of a star from catalogue 2 in catalogue 1
+        Expects everything in Table objects
+
+        """
+        
+        x_shift = 0
+        y_shift = 0
+        
+        #find total shift between catalogues
+        for i in range(set_number-1):
+            x_shift += shifts['xshifts'][i]
+            y_shift += shifts['yshifts'][i]
+        
+        #find expected position of star in catalogue 1 with id 'id2' in
+        #the second catalogue
+        expected_x = cat2['xcenter'][id2] - x_shift
+        expected_y = cat2['ycenter'][id2] - y_shift
+        
+        #get x-y coords of stars in catalogue 1
+        x1s = cat1['xcentroid']
+        y1s = cat1['ycentroid']
+        
+        #find matching star id in catalogue 1 - error of 0.01 seems very large
+        #perhaps implement iterative search? (increasing error if required)
+        for i in range(len(x1s)):
+            if Utilities.equals(expected_x, x1s[i], 0.01) and Utilities.equals(expected_y, y1s[i], 0.01):
+                return i
+            
+        return None
+
