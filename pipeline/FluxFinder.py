@@ -4,6 +4,7 @@ from photutils import aperture_photometry
 from photutils import CircularAperture
 from photutils import CircularAnnulus
 from astropy.io import fits
+from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import Constants
@@ -90,6 +91,8 @@ class FluxFinder:
             Number of image in set
 
         """
+
+        print("[FluxFinder] Finding fluxes in image: set {:1}; image: {:03}".format(s, i))
 
         #get total shift from first image to this one
         x_shift, y_shift = self.get_total_shift(set_number=set_number, image_number=image_number)
@@ -227,85 +230,67 @@ class FluxFinder:
             exit()
         
         times = [line.rstrip(self.config.line_ending) for line in open(self.config.time_path)]
-        
-        light_curves = []
-          
-        #iterate over each image
-                
-        for _, s, i in Utilities.loop_images(self.config):
-                #print("Finding fluxes in image {}".format(str((set-1)*self.set_size + i)))
-                #print("[FluxFinder] Making light curve for image: set {:1}; image: {:03}".format(s, i))
-                
-                t = self.find_fluxes(s, i)
-                                
-                #iterate through each source in the table
-                for j in range(len(t['id'])):
-                    
-                    #add table objects to the light curves array when it is
-                    #empty
-                    if i == 1 and s == 1:
-                        light_curves.append(Table(names = ('time','counts')))
-                        
-                    #get time matching the image
-                    #date_and_time = times[(set-1) * self.set_size * 2 + (2*i-2)]
-                    date_and_time = times[(s-1)*self.config.set_size + i-1]
-                    
+        n_times = len(times)
 
-                    ## TODO: use datetime here
-                    #just interested in time part of date and time for now
-                    time = date_and_time.split("T")[1]
+        dt_obs_start = datetime.strptime(times[0], "%Y-%m-%dT%H:%M:%S")
+
+        ## Light curves
+        ## Dim 0: each source
+        ## Dim 1: time/counts
+        ## Dim 2: measurement number
+        light_curves = np.zeros((self.n_sources, 2, n_times))
+          
+        ## iterate over each image
+        ## Image_index iterates over each measurement
+        ## j iterates over source index
+        image_index = 0
+        for _, s, i in Utilities.loop_images(self.config):
+            #print("[FluxFinder] Making light curve for image: set {:1}; image: {:03}".format(s, i))
+            
+            source_table = self.find_fluxes(s, i)
+                            
+            #iterate through each source in the table
+            for j in range(self.n_sources):
                     
-                    #split time into hours, minutes and seconds
-                    time_split = time.split(":")
-                    time_split[0] = int(time_split[0])
-                    time_split[1] = int(time_split[1])
-                    time_split[2] = int(time_split[2])
-                    
-                    #if the observation start time is empty, add the current
-                    #time in hours minutes and seconds 
-                    if len(self.obs_start_time) == 0:
-                        self.obs_start_time = time_split
-                    
-                    #get difference between time of start and time of 
-                    #observation of current image, in hours minutes and seconds
-                    time_elapsed_hms = Utilities.diff(time_split, self.obs_start_time)
-                    
-                    #if the hours value is positive this observation was taken before midnight
-                    #the time elapsed from the start would be negative as the hour value
-                    #woudl reset to 0
-                    if time_elapsed_hms[0] >= 0:
-                        #get time elapsed in seconds
-                        time_elapsed = time_elapsed_hms[0] * 3600 + time_elapsed_hms[1] * 60 + time_elapsed_hms[2]
-                    else:
-                        time_elapsed_hms_till_midnight = Utilities.diff([23, 59, 60], self.obs_start_time)
-                        time_elapsed = time_elapsed_hms_till_midnight[0] * 3600 + time_elapsed_hms_till_midnight[1] * 60 + time_elapsed_hms_till_midnight[2]
-                        time_elapsed += time_split[0] * 3600 + time_split[1] * 60 + time_split[0]
-                        
-                    
-                    #if median has reasonable value
-                    if t['median'][j] > 0: 
-                        light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
-                    else:
-                        print("[FluxFinder] Rejecting value for source {}, median is {}"
-                                .format(t['id'][j], t['median'][j]))
+                #get time matching the image
+                #date_and_time = times[(set-1) * self.set_size * 2 + (2*i-2)]
+                date_and_time = times[image_index]
+
+                ## TODO: Make time format a config param
+                ## Use datetime objects to calc time difference
+                dt_image = datetime.strptime(date_and_time, "%Y-%m-%dT%H:%M:%S")
+                dt_elapsed = dt_image - dt_obs_start
+                seconds_elapsed = dt_elapsed.seconds
+                
+                #if median has reasonable value
+                if source_table['median'][j] > 0: 
                     #light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
+                    light_curves[j][0][image_index] = seconds_elapsed
+                    light_curves[j][1][image_index] = float(source_table['residual_aperture_sum_med'][j])
+                #else:
+                #    print("[FluxFinder] Rejecting value for source {}, median is {}"
+                #            .format(t['id'][j], t['median'][j]))
+                #light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
+            image_index += 1
 
         #loop through all light curves, writing them out to a file
-        for j in range(len(light_curves)):
+        for j in range(self.n_sources):
             #build light curve path
             fname = self.config.source_format_str.format(self.catalogue['id'][j])
             path = os.path.join(self.config.light_curve_dir, fname)
 
-            table = light_curves[j]
-            table.write(path, format=self.config.table_format, overwrite=True)
-            
-    
+            ## Write light curve
+            ## Transpose to have columns
+            ## Only one light curve per fiel
+            np.savetxt(path, light_curves[j].transpose())
     
     
     
     def map_id(self, id2, cat1, cat2, shifts, set_number):
         """
         Find ID of a star from catalogue 2 in catalogue 1
+        Expects everything in Table objects
+
         """
         
         x_shift = 0
