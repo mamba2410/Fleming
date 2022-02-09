@@ -10,6 +10,7 @@ class ShiftFinder:
 
     config = None
     n_sources = None
+    reference_ids = None
     
     def __init__(self, config, n_sources):
         self.config = config
@@ -29,14 +30,19 @@ class ShiftFinder:
         xs = catalogue["xcentroid"]
         ys = catalogue["ycentroid"]
         fluxes = catalogue["flux"]
+        ids = catalogue["id"]
     
-        sorted_indices = np.argsort(fluxes)
+        sorted_indices = np.flip(np.argsort(fluxes))
 
         brightest_xs = xs[sorted_indices][:n_reference_stars]
         brightest_ys = ys[sorted_indices][:n_reference_stars]
 
+        self.reference_ids = ids[sorted_indices]
+
         return brightest_xs, brightest_ys
     
+    def get_reference_ids(self):
+        return self.reference_ids
 
 
     ## TODO: Fit warnings are probably in here

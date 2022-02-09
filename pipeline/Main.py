@@ -61,6 +61,7 @@ def main():
     ## Gets the shift of each star for each image in the series
     sf = ShiftFinder.ShiftFinder(config, n_sources)
     sf.generate_shifts()
+    reference_ids = sf.get_reference_ids()
      
     shift_finder_time = Utilities.finished_job("finding shifts", cataloguer_time)
      
