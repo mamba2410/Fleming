@@ -91,7 +91,8 @@ class FluxFinder:
 
         """
 
-        print("[FluxFinder] Finding fluxes in image: set {:1}; image: {:03}".format(s, i))
+        print("[FluxFinder] Finding fluxes in image: set {:1}; image: {:03}"
+                .format(set_number, image_number))
 
         #get total shift from first image to this one
         x_shift, y_shift = self.get_total_shift(set_number=set_number, image_number=image_number)
@@ -215,13 +216,17 @@ class FluxFinder:
                 dt_elapsed = dt_image - dt_obs_start
                 seconds_elapsed = dt_elapsed.seconds
                 
+
                 #if median has reasonable value
                 if source_table['median'][j] > 0: 
-                    light_curves[j][0][image_index] = seconds_elapsed
                     light_curves[j][1][image_index] = float(source_table['residual_aperture_sum_med'][j])
+
                 #else:
                 #    print("[FluxFinder] Rejecting value for source {}, median is {}"
                 #            .format(t['id'][j], t['median'][j]))
+
+                ## Include time, regardless of value
+                light_curves[j][0][image_index] = seconds_elapsed
             image_index += 1
 
         #loop through all light curves, writing them out to a file
@@ -271,26 +276,28 @@ class FluxFinder:
             else:
                 curve_path = os.path.join(self.config.light_curve_dir, fname)
 
-        table = Table.read(curve_path, format=self.config.table_format)
+        #table = Table.read(curve_path, format=self.config.table_format)
+        curve = np.genfromtxt(curve_path, dtype=[
+            ('time', 'float64'),
+            ('counts', 'float64'),
+            ]).transpose()
         
-        times = table['time']
-        fluxes = table['counts']
+        times = curve['time']
+        fluxes = curve['counts']
         
 
-        mean = Utilities.mean(fluxes)
+        mean = np.mean(fluxes)
+        normalised_fluxes = fluxes / mean
         
-        for i in range(len(fluxes)):
-            fluxes[i] = fluxes[i]/mean
-        
-        minimum = min(fluxes)
-        maximum = max(fluxes)
+        minimum = min(normalised_fluxes)
+        maximum = max(normalised_fluxes)
     
         ## TODO: Multiple axes, seconds and minutes?
         #plt.figure(figsize = (12, 8))
-        plt.scatter(times, fluxes, s=5, marker = 'x');
+        plt.scatter(times, fluxes, s=5, marker='x');
         plt.xlabel("Time [seconds]")
         plt.ylabel("Relative flux [counts/mean]")
-        plt.ylim(0.9 * minimum, maximum * 1.1)
+        #plt.ylim(0.9 * minimum, maximum * 1.1)
         
         if source_id == None:
             fname = "LC_{}_avg.jpg".format(self.config.image_prefix)
@@ -323,6 +330,8 @@ class FluxFinder:
 
     def plot_avg_light_curve(self, curve_path, adjusted=False, show=False):
         self.plot_light_curve(source_id=None, curve_path=curve_path, adjusted=adjusted, show=show)
+
+
     
 
     ## TODO: Duplicate somewhere else

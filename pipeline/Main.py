@@ -65,38 +65,32 @@ def main():
      
     shift_finder_time = Utilities.finished_job("finding shifts", cataloguer_time)
      
-    exit()
 
     ## FluxFinder
     ff = FluxFinder.FluxFinder(config, n_sources)
 
     ## Find the flux of each star in each image then create a light curve
     ## Write the light curves to file
-    ff.find_all_fluxes()
     ff.make_light_curves()
 
     light_curve_time = Utilities.finished_job("making light curves", shift_finder_time)
+
     
     ## DataAnalyser
     da = DataAnalyser.DataAnalyser(config)
     
-    print("[Main] Getting variables")
-    da.get_means_and_stds(adjusted=False)
-    variable_ids = da.get_variables(ff, adjusted=False)
-    da.plot_means_and_stds(adjusted=False)
+    print("[Main] Creating average light curve")
+    da.create_avg_curve()
 
-    find_variables_time =Utilities.finished_job("finding un-adjusted variables", light_curve_time)
+    make_avg_curve_time = Utilities.finished_job("making average curve", light_curve_time)
 
-    ## Create average light curve of all viable stars
-    print("[Main] Making average curve")
-    avg_ids = da.get_ids_for_avg()
-    ff.make_avg_curve(avg_ids)
+    exit()
 
     ## 'adjusts' light curves by dividing by average
     print("[Main] Adjusting")
     ff.divide_by_average()
 
-    adjustment_time = Utilities.finished_job("adjusting light curves", find_variables_time)
+    adjustment_time = Utilities.finished_job("adjusting light curves", make_avg_curve_time)
 
     avg_fname = "{}_avg{}".format(config.image_prefix, config.standard_file_extension)
     avg_path = os.path.join(config.workspace_dir, avg_fname)

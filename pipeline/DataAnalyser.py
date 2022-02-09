@@ -15,9 +15,14 @@ class DataAnalyser:
 
     n_sources = 0
     source_ids = None
+
     source_means = None
     source_medians = None
     source_stds = None
+
+    adjusted_source_means = None
+    adjusted_source_medians = None
+    adjusted_source_stds = None
 
     n_variables = 0
     variable_scores = None
@@ -25,14 +30,18 @@ class DataAnalyser:
     variable_mask = None
     
 
-    def __init__(self, config, source_ids):
+    def __init__(self, config):
         self.config = config
-        self.source_ids = source_ids
-        self.n_sources = len(source_ids)
+
+        cat = Utilities.read_catalogue(self.config)
+
+        self.source_ids = cat['id']
+        self.n_sources = len(self.source_ids)
 
         
     #plot the means and standard deviations of all light curves generated
-    def get_means_and_stds(self, adjusted=False):
+    ## TODO: Globals are overwritten on adjusted/non-adjusted
+    def get_means_and_stds(self, source_ids=None, adjusted=False):
         """
         Plot the means and standard deviations of all light curves generated
 
@@ -45,14 +54,16 @@ class DataAnalyser:
             use adjusted light curve?
         """
         
-        source_medians = np.empty(n_sources)
-        source_means = np.empty(n_sources)
-        source_stds  = np.empty(n_sources)
+        source_medians = np.empty(self.n_sources)
+        source_means   = np.empty(self.n_sources)
+        source_stds    = np.empty(self.n_sources)
         
+        if source_ids == None:
+            source_ids = self.source_ids
 
         ## TODO: loop better
         #for each file in the light curve directory 
-        for source_index, path, source_id in Utilities.loop_variables(self.config, self.source_ids, adjusted=adjusted):
+        for i, path, source_id in Utilities.loop_variables(self.config, source_ids, adjusted=adjusted):
             
             #read light curve data from file
             lc = np.genfromtxt(path, dtype=[
@@ -71,18 +82,28 @@ class DataAnalyser:
             #only plot data point if at least 5 non-zero counts are recorded
             if n_measures > self.config.set_size*self.config.n_sets / 3:
                 
-                self.source_means[i]   = np.mean(lc['counts'])
-                self.source_stds[i]    = np.std(lc['counts'])
-                self.source_medians[i] = np.median(lc['counts'])
+                source_means[i]   = np.mean(lc['counts'])
+                source_stds[i]    = np.std(lc['counts'])
+                source_medians[i] = np.median(lc['counts'])
                                                    
-                ## TODO: Value checking
-                if value > 0 and value < 2: #and mean > 0.02 and mean < 80:
-                    self.stds.append(value)
-                    self.means.append(mean)
-                    self.id_map.append(int(source_id))
+                ### TODO: Value checking
+                #if value > 0 and value < 2: #and mean > 0.02 and mean < 80:
+                #    self.stds.append(value)
+                #    self.means.append(mean)
+                #    self.id_map.append(int(source_id))
 
         #Utilities.quicksort([self.means, self.stds, self.id_map], True)
+
+        if adjusted:
+            self.adjusted_source_means   = source_means
+            self.adjusted_source_stds    = source_stds
+            self.adjusted_source_medians = source_medians
+        else:
+            self.source_means   = source_means
+            self.source_stds    = source_stds
+            self.source_medians = source_medians
         
+        return source_means, source_stds, source_medians
 
 
     def plot_means_and_stds(self, adjusted=False):
@@ -136,7 +157,7 @@ class DataAnalyser:
 
     ## TODO: Merge with `is_variable` in Cataloguer
     ## TODO: Why using index range?
-    def get_variable_score(self, source_index):
+    def get_variable_score(self, source_index, adjusted=False):
         """
         Returns a score determining the variability of the star
 
@@ -159,14 +180,20 @@ class DataAnalyser:
         if llim < 0:
             llim = 0
         
-        if ulim > len(self.means):
-            ulim = len(self.means)
+        if ulim > self.n_sources:
+            ulim = self.n_sources
         
 
         ## Median of standard deviations
         ## TODO: Why index range instead of flux range?
         ## TODO: Move this out of here
-        median_std = np.median(self.source_stds[llim:ulim])
+        if adjusted:
+            median_std = np.median(self.adjusted_source_stds[llim:ulim])
+            variable_score = (self.adjusted_source_stds[source_index] - median_std)/ median_std
+        else:
+            median_std = np.median(self.source_stds[llim:ulim])
+            variable_score = (self.source_stds[source_index] - median_std)/ median_std
+
         #std_threshold = median_std * (1 + self.config.variability_threshold)
 
         #if self.source_stds[index] > std_threshold:
@@ -174,47 +201,38 @@ class DataAnalyser:
         #    #self.variable_means.append(self.means[index])
         #    #self.variable_stds.append(self.stds[index])
 
-        variable_score = (self.source_stds[source_index] - median_std)/ median_std
         return variable_score
         
         
 
-    def get_variable_ids(self):
+    def get_variable_ids(self, adjusted=True):
         """
         Calculates the variability score of all stars in the catalogue
         then builds a list of source indexes which are deemed variable
 
+        TODO: Bug of id0000 never deemed variable
+
         """
 
-        #cat = np.genfromtxt(self.config.catalogue_path, dtype=[
-        #    ('id', 'int64'),
-        #    ('xcentroid', 'float64'),
-        #    ('ycentroid', 'float64'),
-        #    ('sharpness', 'float64'),
-        #    ('roundness1', 'float64'),
-        #    ('roundness2', 'float64'),
-        #    ('npix', 'float64'),
-        #    ('sky', 'float64'),
-        #    ('peak', 'float64'),
-        #    ('flux', 'float64'),
-        #    ('mag', 'float64'),
-        #    ])
-        #self.results_table = Table(names = ('id', 'xcentroid', 'ycentroid', 'variability', 'RA', 'DEC'))
-        
-        print("[DEBUG] Catalogue has {} sources, DA has {}"
-                .format(len(cat['id']), n_sources))
+        cat = Utilities.read_catalogue(self.config)
+        n_sources_cat = len(cat['id'])
+
+        if n_sources_cat != self.n_sources:
+            print("[DEBUG] Catalogue has {} sources, DA has {}"
+                    .format(n_sources_cat, self.n_sources))
+
 
         self.variable_scores = np.zeros(self.n_sources)
 
         ## Loop over sources in the catalogue
         for i in range(self.n_sources):
-            self.variable_scores[i] = self.get_variable_score(i)
-            
-            if self.variable_scores[i] > self.config.variability_threshold:
+            self.variable_scores[i] = self.get_variable_score(i, adjusted=adjusted)
 
-                ## TODO: Do this after the loop and join with no.where
-                self.variable_ids = np.append(self.variable_ids, self.source_ids[i])
-                self.variable_mask = np.append(self.variable_mask, i)
+        self.variable_mask = np.where(self.variable_scores > self.config.variability_threshold)[0]
+        self.variable_ids = np.copy(self.source_ids[self.variable_mask])
+
+            #else:
+            #    print("[DEBUG] Rejecting, score of {}".format(self.variable_scores[i]))
                 
                 ## TODO: Check if catalogue is always ordered in ids
                 #row_index = np.where(cat['id'].data==variable_id)
@@ -309,70 +327,99 @@ class DataAnalyser:
             
         
         
-    ## TODO: Magic numbers
-    #same function in cataloguer - remove one
-    #probably from cataloguer
-    #comments in other
     def get_ids_for_avg(self):
         """
-        Find IDs of stars with high brightness to produce average light curve.
+        Find IDs of stars to produce average light curve.
         The average light curve is subtracted from each printed light curve to reduce bias
+        Eligable stars must have a value for all images and must not be variable
+
+        Assumes already have variable candidates
+        Always adjusted=False
 
         """
 
         print("[DEBUG] Calling `get_ids_for_avg` in DataAnalyser")
         
-        ids = []
-    
-    
-        for i in range(len(self.means)-1, int((len(self.means)-1) * 0.9), -1):
-            #if self.means[i] > 50 and self.stds[i] < 0.04:
-            #if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
-            #if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
-            if not self.id_map[i] in self.variable_ids:
-                fname = self.config.source_format_str.format(self.id_map[i])
-                light_curve_path = os.path.join(self.config.light_curve_dir, fname)
 
-                t = Table.read(light_curve_path, format=self.config.table_format)
-                
-                if len(t['time']) == self.config.set_size * self.config.n_sets:
-                    ids.append(self.id_map[i])
-        return ids
+        ## Get ids which aren'y deemed variable
+        flat_ids = np.setxor1d(self.source_ids, self.variable_ids)
+
+        avg_ids = np.zeros(len(flat_ids))
+    
+        accepted_index= 0
+        for _i, path, source_id in Utilities.loop_variables(self.config, flat_ids, adjusted=False):
+            curve = np.genfromtxt(path).transpose()
+            n_measures = len(curve[0])
+
+            ## Find indices where counts are positive
+            positive_indices = np.where(curve[1] > 0)[0]
+            
+            ## If all our counts are positive
+            ## (This means we didn't discard it in the flux finding phase)
+            if len(positive_indices) == n_measures:
+                avg_ids[accepted_index] = source_id
+                accepted_index += 1
+
+        avg_ids = np.trim_zeros(avg_ids)
+        return avg_ids
     
 
 
-    #duplicate method in ff - remove this?
-    #comments in other
+    ## Note: Callum changed this algorithm
     def make_avg_curve(self, ids):
+        """
+
+        (Numpy does the loop addition/division for us)
+
+        """
+
         print("[DEBUG] Calling `make_avg_curve` in DataAnalyser")
 
-        for i in range(len(ids)):
-            fname = self.config.source_format_str.format(self.id_map[i])
-            light_curve_path = os.path.join(self.config.light_curve_dir, fname)
+        ## TODO: Make this config-able
+        n_measures = self.config.n_sets*self.config.set_size
+        total_counts = np.zeros(n_measures)
+
+        for i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=False):
+
+            curve = np.genfromtxt(path, dtype=[
+                ('time', 'float64'),
+                ('counts', 'float64'),
+                ]).transpose()
             
-            t = Table.read(light_curve_path, format=self.config.table_format)
-            
-            fluxes = t['counts']
-            
-            if i == 0:
-                for j in range(len(fluxes)):
-                    self.avg_fluxes.append(0)
-                self.times = t['time']
+            fluxes = curve['counts']
+
+            #print("Source id: {}; {}, {}".format(source_id, np.min(fluxes), np.max(fluxes)))
+
+            ## Normalise each curve to ~1
+            ## Median may be better if we have huge outliers/clouds?
+            #source_mean = np.mean(fluxes)
+            #fluxes /= source_mean
+            source_median = np.median(fluxes)
+
+            ## TODO: Temporary bugfix
+            ## Sometimes light curves write all zeros
+            ## so we end up with nan here
+            if source_median > 0:
+                fluxes /= source_median
+                total_counts += fluxes
 
             
-            mean = Utilities.mean(fluxes)
-                        
-            for k in range(len(fluxes)):
-                self.avg_fluxes[k] = self.avg_fluxes[k] + (fluxes[k] / mean)
-            
-        for l in range(len(self.avg_fluxes)):
-            self.avg_fluxes[l] = self.avg_fluxes[l] / len(ids)
         
-        light_curve = Table([self.times, self.avg_fluxes], names = ('time','counts') )
+        ## Create average value at each measurement
+        mean_counts = total_counts/n_measures
 
-        fname= "{}_avg{}".format(self.image_prefix, self.config.standard_file_extension)
-        path = os.path.join(self.config.light_curve_dir, fname)
-        light_curve.write(path, format=self.config.table_format, overwrite=True)
+        ## TODO: Proper sigma clipping
+        delete_idx = np.where(mean_counts>10)[0]
+        mean_counts[delete_idx] = 1
+
+        write_me = np.array([curve['time'], mean_counts]).transpose()
+
+        fname= "{}_avg{}".format(self.config.image_prefix, self.config.standard_file_extension)
+        path = os.path.join(self.config.workspace_dir, fname)
+
+        np.savetxt(path, write_me)
+
+        return write_me
 
 
 
@@ -406,6 +453,13 @@ class DataAnalyser:
                 out_path = os.path.join(self.config.adjusted_curve_dir, fname)
 
                 light_curve.write(out_path, format=self.config.table_format, overwrite=True)
+
+
+    def create_avg_curve(self):
+        _ = self.get_means_and_stds(source_ids=None, adjusted=False)
+        variable_ids = self.get_variable_ids(adjusted=False)
+        avg_ids = self.get_ids_for_avg()
+        self.make_avg_curve(avg_ids)
 
         
     ## TODO: Quicksort
