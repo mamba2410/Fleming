@@ -155,11 +155,10 @@ class DataAnalyser:
     ## TODO: Why using index range?
     def get_variable_score(self, source_index, adjusted=False):
         """
-        Returns a score determining the variability of the star
-
-        the next part is just the same as the is_variable method
-        in Cataloguer - need to investigate if there is a reason for this
-        Merge both together?
+        Returns a score determining the variability of the star.
+        
+        Score is the standard deviation of the source compared
+        to the median of the surrounding stars (in index-space)
 
         Parameters
         ----------
@@ -180,8 +179,8 @@ class DataAnalyser:
             ulim = self.n_sources
         
         ## Debug
-        llim = 0
-        ulim = self.n_sources
+        #llim = 0
+        #ulim = self.n_sources
 
         ## Median of standard deviations
         ## TODO: Why index range instead of flux range?
