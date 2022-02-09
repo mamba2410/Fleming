@@ -21,14 +21,8 @@ class FluxFinder:
     
     #catalogue of image 1
     catalogue = None
-    n_sources= None
-    
-    #time at which first image was taken
-    obs_start_time = []
-    
-    times = []
-    
-    avg_fluxes = []
+    n_sources = None
+    n_measures = None
     
     
     def __init__(self, config, n_sources):
@@ -38,6 +32,7 @@ class FluxFinder:
 
         self.config = config
         self.n_sources = n_sources
+        self.n_measures = self.config.set_size*self.config.n_sets
         
         self.catalogue = Utilities.read_catalogue(self.config)
         self.x_shifts, self.y_shifts = np.genfromtxt(self.config.shift_path).transpose()
@@ -390,7 +385,7 @@ class FluxFinder:
 
 
 
-    def divide_by_average(self):
+    def create_adjusted_light_curves(self):
         """
         Divides all light curves by the average light curve to remove noise.
         Also removes global effects of the field that vary over time.
@@ -399,31 +394,28 @@ class FluxFinder:
 
         """
         print("[DEBUG] Calling `divide_by_average` in FluxFinder")
-                    
+
+        avg_curve = np.genfromtxt(self.config.avg_curve_path, dtype=[
+            ('time', 'float64'),
+            ('counts', 'float64'),
+            ]).transpose()
+
         #for all files
         for path, source_id in Utilities.list_sources(self.config, adjusted=False):
-            t = Table.read(path, format=self.config.table_format)
-                                            
-            this_fluxes = t['counts']
-            this_times = t['time']
-            
-            for i in range(len(this_fluxes)):
-                time = this_times[i]
-                
-                #divide each flux measurement by the average flux measurement
-                #at its respective point in time
-                for j in range(len(self.avg_fluxes)):
-                    if time == self.times[j]:
-                        this_fluxes[i] = this_fluxes[i] / self.avg_fluxes[j]
-                        #print(this_fluxes[i])
-            
-            #export adjusted light curve
-            light_curve = Table([this_times, this_fluxes], names = ('time','counts'))
+            curve = np.genfromtxt(path, dtype=[
+                ('time', 'float64'),
+                ('counts', 'float64'),
+                ]).transpose()
 
+            
+            curve['counts'] /= avg_curve['counts']
+            med = np.median(curve['counts'])
+            curve['counts'] /= med
+            
             fname = self.config.source_format_str.format(source_id)
             out_path = os.path.join(self.config.adjusted_curve_dir, fname)
 
-            light_curve.write(out_path, format=self.config.table_format, overwrite=True)
+            np.savetxt(out_path, curve)
 
         
 

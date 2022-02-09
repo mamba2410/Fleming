@@ -72,10 +72,6 @@ class DataAnalyser:
                 ])
             n_measures = len(lc['time'])
             
-            ## TODO: Move this
-            if adjusted:
-                if self.remove_cosmics(t):
-                    print("[DataAnalyser] Removed cosmics on id {}", source_id)
                 
                             
             ## TODO: Magic number
@@ -414,45 +410,9 @@ class DataAnalyser:
 
         write_me = np.array([curve['time'], mean_counts]).transpose()
 
-        fname= "{}_avg{}".format(self.config.image_prefix, self.config.standard_file_extension)
-        path = os.path.join(self.config.workspace_dir, fname)
-
-        np.savetxt(path, write_me)
+        np.savetxt(self.config.avg_curve_path, write_me)
 
         return write_me
-
-
-
-    ## TODO: 
-    #duplicate method in ff - remove this?
-    #comments in other
-    def divide_by_average(self):
-        print("[DEBUG] Calling `divide_by_average` in DataAnalyser")
-                    
-        #for all source files
-        for path, source_id in Utilities.list_sources(self.config):
-                t = Table.read(path, format=self.config.table_format)
-                                                
-                this_fluxes = t['counts']
-                this_times = t['time']
-                
-                for i in range(len(this_fluxes)):
-                    time = this_times[i]
-                    
-                    #divide each flux measurement by the average flux measurement
-                    #at its respective point in time
-                    for j in range(len(self.avg_fluxes)):
-                        if time == self.times[j]:
-                            this_fluxes[i] = this_fluxes[i] / self.avg_fluxes[j]
-                            #print(this_fluxes[i])
-                
-                #export adjusted light curve
-                light_curve = Table([this_times, this_fluxes], names = ('time','counts'))
-
-                fname = self.config.source_format_str.format(source_id)
-                out_path = os.path.join(self.config.adjusted_curve_dir, fname)
-
-                light_curve.write(out_path, format=self.config.table_format, overwrite=True)
 
 
     def create_avg_curve(self):
@@ -460,6 +420,26 @@ class DataAnalyser:
         variable_ids = self.get_variable_ids(adjusted=False)
         avg_ids = self.get_ids_for_avg()
         self.make_avg_curve(avg_ids)
+
+
+    def get_variables(self):
+        _means, stds, _meds = self.get_means_and_stds(source_ids=None, adjusted=True)
+
+        ## Remove any cosmic rays in the light curve
+        for i, path, source_id in Utilities.loop_variables(self.config, self.source_ids, adjusted=True):
+            curve = np.genfromtxt(path, dtype=[
+                ('time', 'float64'),
+                ('counts', 'float64'),
+                ]).transpose()
+
+            if self.remove_cosmics(curve, stds[i]):
+                print("[DataAnalyser] Removed cosmics on id {}".format(source_id))
+                np.savetxt(path, curve)
+
+        variable_ids = self.get_variable_ids(adjusted=True)
+
+        return variable_ids
+
 
         
     ## TODO: Quicksort
@@ -480,28 +460,24 @@ class DataAnalyser:
 
 
        
-    def remove_cosmics(self, t):
+    def remove_cosmics(self, lc, std):
         """
-        Remove cosmic rays in image
+        Remove cosmic rays in light curve
+        I don't know the algorithm but it seems to work
 
         Parameters
         ----------
 
-        t: Table
-            Table contaning source information. Counts will be modified
+        lc: numpy array
             
         """
         
-        counts = t['counts']
+        counts = lc['counts']
         cosmic_index = -1
         
-        if len(counts) == 0:
-            return
+        n_measures = len(counts)
         
-        std = Utilities.standard_deviation(counts)
-
-        
-        for i in range(len(counts)):
+        for i in range(n_measures):
             
             m = counts[i]
             
@@ -524,17 +500,13 @@ class DataAnalyser:
             
         if cosmic_index == -1:
             return False
-            
-        print("[DataAnalyser] cosmic detected at approx {}s in id:"
-            .format(35*cosmic_index))
-        ## TODO: Change the 35 (image cadence)
         
         if i == 0:
             replacement = counts[1]
         else:
             replacement = counts[i-1]
                 
-        t['counts'][cosmic_index] = replacement
+        lc['counts'][cosmic_index] = replacement
             
         return True
           

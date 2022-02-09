@@ -84,27 +84,22 @@ def main():
 
     make_avg_curve_time = Utilities.finished_job("making average curve", light_curve_time)
 
-    exit()
-
     ## 'adjusts' light curves by dividing by average
     print("[Main] Adjusting")
-    ff.divide_by_average()
+    ff.create_adjusted_light_curves()
 
     adjustment_time = Utilities.finished_job("adjusting light curves", make_avg_curve_time)
 
-    avg_fname = "{}_avg{}".format(config.image_prefix, config.standard_file_extension)
-    avg_path = os.path.join(config.workspace_dir, avg_fname)
-
-    print("[Main] Plotting variable curves")
-    ff.plot_avg_light_curve(avg_path, adjusted=True, show=False)
-    ff.plot_all_light_curves(variable_ids, adjusted=True, show=False)
-
     print("[Main] Getting variables post-adjustment")
-    da.get_means_and_stds(adjusted=True)
-    _ = da.get_variables(ff, adjusted=True)
-    da.plot_means_and_stds(adjusted=True)
+    variable_ids = da.get_variables()
 
     _ = Utilities.finished_job("post-adjustment", adjustment_time)
+
+    print("[Main] Plotting variable curves")
+    ff.plot_avg_light_curve(config.avg_curve_path, show=False)
+    ff.plot_all_light_curves(variable_ids, adjusted=True, show=False)
+
+    exit()
 
     print("[Main] Outputting results")
     da.output_results()

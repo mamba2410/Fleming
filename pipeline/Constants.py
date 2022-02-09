@@ -23,6 +23,7 @@ class Config:
             id_map_fname        = "id_mapper",
             moving_obj_fname    = "moving_obj",
             astrometry_job_fname = "astrometryjob",
+            avg_curve_fname     = "avg",
 
             reduced_prefix      = "r_",
             catalogue_prefix    = "catalogue_",
@@ -83,6 +84,8 @@ class Config:
         self.moving_obj_path        = os.path.join(self.workspace_dir, fname)
         fname = "{}{}".format(astrometry_job_fname, standard_file_extension)
         self.astrometry_job_path    = os.path.join(self.workspace_dir, fname)
+        fname = "{}_{}{}".format(image_prefix, avg_curve_fname, standard_file_extension)
+        self.avg_curve_path         = os.path.join(self.workspace_dir, fname)
 
         self.reduced_prefix         = reduced_prefix
         self.catalogue_prefix       = catalogue_prefix
