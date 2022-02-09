@@ -23,6 +23,9 @@ class ShiftFinder:
         Finds pixel coordinates of n brightest stars in catalogue
 
         """
+
+        ## Debug, skip these N brightest stars
+        skip = 0
         
         #reads in catalogue
         catalogue = Utilities.read_catalogue(self.config)
@@ -34,8 +37,8 @@ class ShiftFinder:
     
         sorted_indices = np.flip(np.argsort(fluxes))
 
-        brightest_xs = xs[sorted_indices][:n_reference_stars]
-        brightest_ys = ys[sorted_indices][:n_reference_stars]
+        brightest_xs = xs[sorted_indices][skip:skip+n_reference_stars]
+        brightest_ys = ys[sorted_indices][skip:skip+n_reference_stars]
 
         self.reference_ids = ids[sorted_indices]
 
@@ -45,7 +48,7 @@ class ShiftFinder:
         return self.reference_ids
 
 
-    ## TODO: Fit warnings are probably in here
+    ## TODO: Fix fit warnings
     def find_shift(self, previous_x, previous_y, image_path, size=10):
         """
         
@@ -90,10 +93,6 @@ class ShiftFinder:
         # Select just the box around the star
         data_square = data_array[ylow:yhigh,xlow:xhigh]
 
-        #print(len(data_array), len(data_array[0]))
-        #print(ylow, yhigh, xlow, xhigh)
-        #print(data_square)
-
         # Get coordinates of the centre of the star in the data square
         # Fits a 2d Gaussian to data
         x, y = centroid_2dg(data_square)
@@ -106,12 +105,9 @@ class ShiftFinder:
         y_shift = ((y - size) - (previous_y - int(previous_y)))
         
         return x_shift, y_shift
-    
-        
 
 
-    ## TODO: Shifts seem to be wildly different each time, +/- 10 pixels per image
-    ## TODO: Fix fit warnings
+
     def generate_shifts(self):
         
         #empty shift file if it exists
@@ -163,8 +159,8 @@ class ShiftFinder:
 
             ## Set the previous shift for next loop
             ## Next image's previous shift is our current shift
-            prev_x_shift = med_shift_x 
-            prev_y_shift = med_shift_y 
+            prev_x_shift = star_shifts[0][j] 
+            prev_y_shift = star_shifts[1][j] 
 
             print("[ShiftFinder] ...Shifts: {},{}".format(star_shifts[0][j], star_shifts[1][j]))
             j += 1
@@ -173,6 +169,8 @@ class ShiftFinder:
         
         ## Write shifts to file
         np.savetxt(self.config.shift_path, np.transpose(star_shifts))
+
+
     
 
 ## TODO: Remove
