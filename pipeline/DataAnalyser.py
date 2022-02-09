@@ -45,7 +45,7 @@ class DataAnalyser:
         """
         Plot the means and standard deviations of all light curves generated
 
-        Loops over all sources, removes cosmics if adjusted.
+        Loops over all sources.
 
         Parameters
         ----------
@@ -179,16 +179,19 @@ class DataAnalyser:
         if ulim > self.n_sources:
             ulim = self.n_sources
         
+        ## Debug
+        llim = 0
+        ulim = self.n_sources
 
         ## Median of standard deviations
         ## TODO: Why index range instead of flux range?
         ## TODO: Move this out of here
         if adjusted:
             median_std = np.median(self.adjusted_source_stds[llim:ulim])
-            variable_score = (self.adjusted_source_stds[source_index] - median_std)/ median_std
+            variable_score = self.adjusted_source_stds[source_index]/median_std - 1
         else:
             median_std = np.median(self.source_stds[llim:ulim])
-            variable_score = (self.source_stds[source_index] - median_std)/ median_std
+            variable_score = self.source_stds[source_index]/median_std - 1
 
         #std_threshold = median_std * (1 + self.config.variability_threshold)
 
@@ -200,6 +203,8 @@ class DataAnalyser:
         return variable_score
         
         
+    def get_source_ids(self):
+        return self.source_ids
 
     def get_variable_ids(self, adjusted=True):
         """
@@ -433,7 +438,7 @@ class DataAnalyser:
                 ]).transpose()
 
             if self.remove_cosmics(curve, stds[i]):
-                print("[DataAnalyser] Removed cosmics on id {}".format(source_id))
+                #print("[DataAnalyser] Removed cosmics on id {}".format(source_id))
                 np.savetxt(path, curve)
 
         variable_ids = self.get_variable_ids(adjusted=True)

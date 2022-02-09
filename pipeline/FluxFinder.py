@@ -127,11 +127,11 @@ class FluxFinder:
             phot_table2[col].info.format = '%.8g'  # for consistent table output
     
 
-        ## Set new columns to -1
-        phot_table2['mean'] = phot_table2['aperture_sum_1']*0 - 1
-        phot_table2['median'] = phot_table2['aperture_sum_1']*0 - 1
-        phot_table2['residual_aperture_sum_mean'] = phot_table2['aperture_sum_1']*0 - 1
-        phot_table2['residual_aperture_sum_med'] = phot_table2['aperture_sum_1']*0 - 1
+        ## Set new columns to some unphysical value
+        phot_table2['mean'] = phot_table2['aperture_sum_1']*0 - 1e9
+        phot_table2['median'] = phot_table2['aperture_sum_1']*0 - 1e9
+        phot_table2['residual_aperture_sum_mean'] = phot_table2['aperture_sum_1']*0 - 1e9
+        phot_table2['residual_aperture_sum_med'] = phot_table2['aperture_sum_1']*0 - 1e9
 
         for i in range(n_sources_phot):
             
@@ -160,8 +160,7 @@ class FluxFinder:
                 final_sum = phot_table2['aperture_sum_0'][i] - bkg_sum
                 phot_table2['residual_aperture_sum_med'][i] = final_sum
 
-
-            ### For debug purposes
+            ## For debug purposes
             #else:
             #    print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
             #            .format(i, x_max, y_max, x, y))

@@ -1,71 +1,115 @@
-import Constants
 import Utilities
+import Constants
+import Reducer
 import Cataloguer
 import ShiftFinder
 import FluxFinder
 import DataAnalyser
+import MovingObjectFinder
+import StreakFinder
 
+from datetime import datetime
 import os
 
 def main():
 
+    start_time = datetime.now()
+    print("Started at {}".format(start_time.strftime("%H:%M:%S")))
+    
+    ## Config
+    ## Config object for a run of data
+    ## See `Constants.py` for available options and default values
     config = Constants.Config(
-        image_dir = "/home/callum/mnt/data/jgtdata/l137_0",
+        image_dir = "/home/callum/mnt/data/jgtdata/l137_0/0121",
         image_prefix = "l137_0",
         has_sets = True,
         set_size = 50,
-        n_sets = 2,
+        n_sets = 7,
+        variability_threshold = 0.6
     )
     
+    ## Reducer
+    ## Takes raw images, subtracts bias and divides by flat field
+    #r = Reducer.Reducer(config, "No filter")    ## Only "No filter" for Trius
+    #r.reduce(skip_existing=True)    ## Skip images that have already been reduced
+
+    reducer_time = Utilities.finished_job("reducing images", start_time)
     
+    
+    ## Cataloguer
+    ## Creates a catalogue of stars found in the given image
     c = Cataloguer.Cataloguer(config)
-    catalogue_image = os.path.join(
-            config.image_dir,
+
+    catalogue_set_number = 1
+    catalogue_image_number = 1
+
+    catalogue_image_path = os.path.join(config.image_dir,
             config.image_format_str
-                .format(1, 1))
+            .format(catalogue_set_number, catalogue_image_number))
 
-    c.catalogue(catalogue_image, solve=False)
-    Utilities.print_job("cataloguing stars")
-     
-    #sf = ShiftFinder.ShiftFinder(config)
-    #sf.get_all_shifts()
-    #Utilities.print_job("finding shifts")
+    n_sources = c.generate_catalogue(catalogue_image_path, solve=False)
+    #c.generate_image_times()
 
-    ff = FluxFinder.FluxFinder(config, c.get_n_sources())
-
-    ff.find_all_fluxes()
-    ff.make_light_curves()
-    Utilities.print_job("making light curves")
+    cataloguer_time = Utilities.finished_job("cataloguing stars", reducer_time)
     
 
+    ## Moving object finder
+    #mof = MovingObjectFinder.MovingObjectFinder(Constants.folder)
+    #mof.find_moving_objects()
+     
+     
+    ## ShiftFinder
+    ## Gets the shift of each star for each image in the series
+    #sf = ShiftFinder.ShiftFinder(config, n_sources)
+    #sf.generate_shifts()
+    #reference_ids = sf.get_reference_ids()
+     
+    shift_finder_time = Utilities.finished_job("finding shifts", cataloguer_time)
+     
+
+    ## FluxFinder
+    ff = FluxFinder.FluxFinder(config, n_sources)
+
+    ## Find the flux of each star in each image then create a light curve
+    ## Write the light curves to file
+    #ff.make_light_curves()
+
+    light_curve_time = Utilities.finished_job("making light curves", shift_finder_time)
+
+    
+    ## DataAnalyser
     da = DataAnalyser.DataAnalyser(config)
     
-    da.get_means_and_stds(adjusted=False)
-    da.get_variables(ff, adjusted=False)
-    da.plot_means_and_stds(adjusted=False)
+    print("[Main] Creating average light curve")
+    da.create_avg_curve()
 
-    avg_ids = da.get_ids_for_avg()
-    ff.make_avg_curve(avg_ids)
+    make_avg_curve_time = Utilities.finished_job("making average curve", light_curve_time)
 
-    ff.divide_by_average()
+    ## 'adjusts' light curves by dividing by average
+    print("[Main] Adjusting")
+    ff.create_adjusted_light_curves()
 
-    avg_fname = "{}_avg{}".format(config.image_prefix, config.standard_file_extension)
-    avg_path = os.path.join(config.workspace_dir, avg_fname)
-    #ff.plot_light_curve(path=avg_path, adjusted=True, show=False)
-    ff.plot_avg_light_curve(avg_path, adjusted=True, show=False)
-    ff.plot_all_light_curves(adjusted=True, show=False)
+    adjustment_time = Utilities.finished_job("adjusting light curves", make_avg_curve_time)
 
-    Utilities.print_job("adjusting light curves")
-    
-    
-    da.get_means_and_stds(adjusted=True)
-    da.get_variables(ff, adjusted=True)
-    da.plot_means_and_stds(adjusted=True)
+    print("[Main] Getting variables post-adjustment")
+    variable_ids = da.get_variables()
+
+    _ = Utilities.finished_job("post-adjustment", adjustment_time)
+
+    print("[Main] Plotting variable curves")
+    ff.plot_avg_light_curve(config.avg_curve_path, show=False)
+    ff.plot_all_light_curves(variable_ids, adjusted=True, show=False)
+
+    source_ids = da.get_source_ids()
+    ff.plot_all_light_curves(source_ids, adjusted=True)
+
+    exit()
+
+    print("[Main] Outputting results")
     da.output_results()
     da.create_thumbnails(ff)
     
-    Utilities.print_job("everything")
-
+    _ = Utilities.finished_job("everything", start_time)
 
 
 if __name__ == "__main__":

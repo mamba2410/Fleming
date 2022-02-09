@@ -24,7 +24,7 @@ def main():
         image_prefix = "l137_0",
         has_sets = True,
         set_size = 50,
-        n_sets = 7
+        n_sets = 7,
     )
     
     ## Reducer
