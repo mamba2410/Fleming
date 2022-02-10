@@ -1,7 +1,43 @@
 import os
 
 
+## TODO: Append image_prefix to times and shifts files
 class Config:
+    """
+    Config object for each run.
+    
+    Set parameters here which won't change for a single run.
+    Pass this object around to the other classes for a nicer
+    way of having 'global' variables.
+
+    Note: Anything with "_dir" suffix is an absolute path to a directory.
+          Anything with "_subdir" is a subdirectory of the workspace.
+          "_fname" is a file name (without extension).
+          "_path" is an absolute path to a file (not directory).
+
+    Don't change the things in here, these are just defaults.
+    If you want to change something for a run or user, do it 
+    when making a new config object like:
+
+    ```
+    config = Config(
+                pipeline_root = "/where/i/am/working",
+                image_dir = "/path/to/reduced/images",
+                has_sets = True,
+                n_sets = 8,
+                set_size = 50,
+             )
+    ```
+
+    Any directories listed here will be created if they don't already exist.
+
+    Hopefully most things are self-explanatory.
+    Further explanations are below:
+
+    Parameters
+    ----------
+
+    """
     
     ## Defaults for the config.
     ## These shouldn't need changing here
@@ -61,8 +97,12 @@ class Config:
             api_key_file        = "astrometry_api_key.txt"
             ):
 
+        ## Set all the values to the object
+
         self.pipeline_root          = pipeline_root
         self.workspace_dir          = os.path.join(pipeline_root, workspace_subdir)
+
+        ## Only overwrite image_dir if the user didn't give us an explicit path
         if len(image_dir) > 0:
             self.image_dir = image_dir
         else:
@@ -126,13 +166,17 @@ class Config:
         ## ===============
         ## Setting up other stuff
 
+
+        ## Read in astrometry api key from file
         with open(os.path.join(pipeline_root, api_key_file)) as f:
             self.api_key = f.read().replace(line_ending, "")
 
-
+        ## Create catalogue path
         fname = "{}{}{}".format(catalogue_prefix, image_prefix, standard_file_extension)
         self.catalogue_path = os.path.join(self.workspace_dir, fname)
 
+        ## Format strings used to identify image file names and 
+        ## light curve file names
         if self.has_sets:
             self.image_format_str = "{}{}_{}_{}{}".format(
                     reduced_prefix, image_prefix, "{:1}", "{:03}", fits_extension)
