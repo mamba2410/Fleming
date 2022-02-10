@@ -31,29 +31,63 @@ class DataAnalyser:
     
 
     def __init__(self, config):
+        """
+        Does all the number-crunching for the pipeline.
+        Further refining the data from the light curves and 
+        transforming it.
+
+        Parameters
+        ----------
+
+        config: Config
+            Config object
+
+        """
+
         self.config = config
 
+
+        ## Set our internal number of sources to how many we have
+        ## in the catalogue
         cat = Utilities.read_catalogue(self.config)
 
         self.source_ids = cat['id']
         self.n_sources = len(self.source_ids)
 
         
-    #plot the means and standard deviations of all light curves generated
     ## TODO: Globals are overwritten on adjusted/non-adjusted
     def get_means_and_stds(self, source_ids=None, adjusted=False):
         """
-        Plot the means and standard deviations of all light curves generated
+        Plot the mean against standard deviation for the light curves
+        of all sources with ids as given.
+        If none are given, do it for all sources.
 
-        Loops over all sources.
+        Note: No sigma-clipping is done (yet).
 
         Parameters
         ----------
 
+        source_ids: numpy array (int), optional
+            Array of all ids to use.
+
         adjusted: bool, optional
-            use adjusted light curve?
+            Use adjusted light curves?
+
+        Returns
+        -------
+
+        source_means: numpy array (float64)
+            Means of all sources given.
+
+        source_stds: numpy array (float64)
+            Standard deviations of all sources given.
+
+        source_medians: numpy array (float64)
+            Medians of all sources given.
+
         """
         
+        ## Make empty arrays
         source_medians = np.empty(self.n_sources)
         source_means   = np.empty(self.n_sources)
         source_stds    = np.empty(self.n_sources)
@@ -62,20 +96,19 @@ class DataAnalyser:
             source_ids = self.source_ids
 
         ## TODO: loop better
-        #for each file in the light curve directory 
+        ## For each source
         for i, path, source_id in Utilities.loop_variables(self.config, source_ids, adjusted=adjusted):
             
-            #read light curve data from file
+            ## Read light curve data from file
             lc = np.genfromtxt(path, dtype=[
                 ('time', 'float64'),
                 ('counts', 'float64')
                 ])
+
+            ## Get number of measurements
             n_measures = len(lc['time'])
-            
-                
                             
-            ## TODO: Magic number
-            #only plot data point if at least 5 non-zero counts are recorded
+            ## TODO: Magic number, fix this logic
             if n_measures > self.config.set_size*self.config.n_sets / 3:
                 
                 source_means[i]   = np.mean(lc['counts'])
@@ -83,6 +116,7 @@ class DataAnalyser:
                 source_medians[i] = np.median(lc['counts'])
                                                    
                 ### TODO: Value checking
+                #value = std/mean
                 #if value > 0 and value < 2: #and mean > 0.02 and mean < 80:
                 #    self.stds.append(value)
                 #    self.means.append(mean)
