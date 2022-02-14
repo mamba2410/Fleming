@@ -2,8 +2,14 @@
 
 ## Known bugs/issues
 
-- Are adjusted light curves okay? Some seem wild
 - Commented out line in `FluxFinder.py:262` in `make_light_curves()`. Seems median is zero or negative
+- Breaks when finding shifts with l136_0 S4I030, not enough values for Gaussian
+
+Runtime warnings/invalid values on l137_0
+
+- DA:228
+- FF:432
+- DA:604
 
 ## Improvements
 
@@ -15,12 +21,13 @@
 	- reject if opt avg fit has too large standard deviation?
 	- if variables overlap with stars that hit edge of field, ignore
 - raw/reduced images to be stored in separate directory
+- Stack images and use that as the catalogue image?
+- Assumes catalogue is first image (where exactly?)
 - sigma clip light curves?
 - concept of categorising light curves? messy (wide std), flat (very unlikely variable), human (unsure)
 - Thumbnail size in `Constants.py`
-- Do something with the WCS (ie add RA/DEC to catalogue)
 - Make a `Catalogue` class which has numpy array of sources to save file reading.
-- Assumes catalogue is first image (where exactly?)
+- Docs on the readme about the 'public' functions that users can run.
 
 ## Possible bugs
 
