@@ -240,7 +240,7 @@ class FluxFinder:
         
         
         
-    def plot_light_curve(self, source_id=None, curve_path=None, adjusted=False, show=False):
+    def plot_light_curve(self, source_id=None, curve_path=None, adjusted=False, show=False, close=True):
         """
         Plot light curve of star with the given ID from catalogue
 
@@ -254,8 +254,14 @@ class FluxFinder:
         curve_path: string, optional
             Path to save the image to
 
-        adjusted: bool
+        adjusted: bool, optional
             Has the lighth curve been divided by the average flux?
+
+        show: bool, optional
+            Should we show the plot?
+
+        close: bool, optional
+            Should we close the plot? (useful for overplotting)
 
         """
 
@@ -281,24 +287,29 @@ class FluxFinder:
         
 
         mean = np.mean(fluxes)
-        normalised_fluxes = fluxes / mean
+        median = np.median(fluxes)
+        #normalised_fluxes = fluxes / mean
+        normalised_fluxes = fluxes/median
         
         minimum = min(normalised_fluxes)
         maximum = max(normalised_fluxes)
     
         ## TODO: Multiple axes, seconds and minutes?
         #plt.figure(figsize = (12, 8))
-        plt.scatter(times, fluxes, s=5, marker='x');
+        plt.scatter(times, normalised_fluxes, s=5, marker='x');
         plt.xlabel("Time [seconds]")
         plt.ylabel("Relative flux [counts/mean]")
+
         #plt.ylim(0.9 * minimum, maximum * 1.1)
+        ## Debug
+        #plt.ylim(0, 2)
         
         if source_id == None:
-            fname = "LC_{}_avg.jpg".format(self.config.image_prefix)
+            fname = "{}_LC_avg.jpg".format(self.config.image_prefix)
             plt.title("Light curve for average of sources (adjusted={})"
                 .format(adjusted))
         elif source_id >= 0:
-            fname = "LC_{}_{}{:04}.jpg".format(
+            fname = "{}_LC_{}{:04}.jpg".format(
                 self.config.image_prefix, self.config.identifier, source_id)
             plt.title("Light curve for source {:04} (adjusted={})"
                 .format(source_id, adjusted))
@@ -313,14 +324,23 @@ class FluxFinder:
 
         image_file = os.path.join(self.config.output_dir, fname)
         plt.savefig(image_file)
-        plt.close()
+
+        if close:
+            plt.close()
 
 
         
     def plot_all_light_curves(self, ids, adjusted=False, show=False):
         for _i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
-            self.plot_light_curve(source_id=source_id, curve_path=path, adjusted=adjusted, show=show)
+            self.plot_light_curve(
+                    source_id=source_id, curve_path=path, adjusted=adjusted, show=show, close=False)
 
+    def plot_adjusted_comparison(self, ids, show=False):
+        for _i, _path, source_id in Utilities.loop_variables(self.config, ids, adjusted=False):
+            self.plot_light_curve(
+                    source_id=source_id, curve_path=None, adjusted=False, show=False, close=False)
+            self.plot_light_curve(
+                    source_id=source_id, curve_path=None, adjusted=True, show=show, close=True)
 
     def plot_avg_light_curve(self, curve_path, adjusted=False, show=False):
         self.plot_light_curve(source_id=None, curve_path=curve_path, adjusted=adjusted, show=show)
