@@ -55,7 +55,6 @@ class DataAnalyser:
         self.n_sources = len(self.source_ids)
 
         
-    ## TODO: Globals are overwritten on adjusted/non-adjusted
     def get_means_and_stds(self, source_ids=None, adjusted=False):
         """
         Plot the mean against standard deviation for the light curves
@@ -185,8 +184,8 @@ class DataAnalyser:
 
 
 
-    ## TODO: Merge with `is_variable` in Cataloguer
     ## TODO: Why using index range?
+    ## TODO: Better way of determining score
     def get_variable_score(self, source_index, adjusted=False):
         """
         Returns a score determining the variability of the star.
@@ -199,6 +198,9 @@ class DataAnalyser:
 
         index: int
             Index of variable star to check?
+
+        adjusted: bool, optional
+            Has the source light curve been adjusted?
 
         """
         
@@ -218,7 +220,6 @@ class DataAnalyser:
 
         ## Median of standard deviations
         ## TODO: Why index range instead of flux range?
-        ## TODO: Move this out of here
         if adjusted:
             median_std = np.median(self.adjusted_source_stds[llim:ulim])
             variable_score = self.adjusted_source_stds[source_index]/median_std - 1
@@ -237,14 +238,38 @@ class DataAnalyser:
         
         
     def get_source_ids(self):
+        """
+        Give all the IDs of each source known by the object.
+
+        Returns
+        -------
+
+        self.source_ids: numpy array
+            array of all source ids known
+
+        """
+
         return self.source_ids
 
+    ## TODO: Bug of id0000 never deemed variable
+    ## TODO: Exclude 'problematic stars' (eg stars on edge of field)
     def get_variable_ids(self, adjusted=True):
         """
         Calculates the variability score of all stars in the catalogue
-        then builds a list of source indexes which are deemed variable
+        then builds a list of source indexes which are deemed variable.
 
-        TODO: Bug of id0000 never deemed variable
+        Parameters
+        ----------
+        
+        adjusted: bool, optional
+            Has the source light curve been adjusted?
+
+
+        Returns
+        -------
+
+        self.variable_ids: numpy array
+            Numpy array of all ids which are deemed to be variable candidates.
 
         """
 
@@ -308,6 +333,8 @@ class DataAnalyser:
 
         ff: FluxFinder
             FluxFinder object used to get a thumbnail slice
+
+            
         """
         
         #for i, (path, source_id) in enumerate(Utilities.list_sources(self.config, adjusted=adjusted)):
@@ -370,6 +397,12 @@ class DataAnalyser:
         Assumes already have variable candidates
         Always adjusted=False
 
+        Returns
+        -------
+
+        avg_ids: numpy array
+            IDs of sources suitable for finding the average light curve
+
         """
 
         print("[DEBUG] Calling `get_ids_for_avg` in DataAnalyser")
@@ -402,8 +435,25 @@ class DataAnalyser:
     ## Note: Callum changed this algorithm
     def make_avg_curve(self, ids):
         """
+        Creates an average light curve from the given ID array.
+
+        Divides each light curve by the median counts (to account for different star 
+        brightnesses).
+        Takes the mean value at each time and considers this the average curve.
 
         (Numpy does the loop addition/division for us)
+
+        Parameters
+        ----------
+
+        ids: numpy array
+            IDs of the sources to use for the average curve.
+
+        Returns
+        -------
+
+        avg_curve: numpy array 2d
+            Light curve of times and counts of the average of each light curve.
 
         """
 
@@ -454,6 +504,13 @@ class DataAnalyser:
 
 
     def create_avg_curve(self):
+        """
+        Wrapper function user should call to create the average light curve.
+        Prepares the object to be in the state it expects to be 
+        when creating the average light curve.
+
+        """
+
         _ = self.get_means_and_stds(source_ids=None, adjusted=False)
         variable_ids = self.get_variable_ids(adjusted=False)
         avg_ids = self.get_ids_for_avg()
@@ -461,6 +518,18 @@ class DataAnalyser:
 
 
     def get_variables(self):
+        """
+        Function the user should call to get final IDs of sources deemed variable
+        candiates.
+
+        Returns
+        -------
+
+        variable_ids: numpy array
+            IDs of each source considered variable
+
+        """
+
         _means, stds, _meds = self.get_means_and_stds(source_ids=None, adjusted=True)
 
         ## Remove any cosmic rays in the light curve
@@ -480,9 +549,11 @@ class DataAnalyser:
 
 
         
-    ## TODO: Quicksort
-    #save table of variable stars (in order of decreasing variability)
     def output_results(self):
+        """
+        Save the table of variable stars, in order of decreasing variability
+
+        """
         
         a = [self.results_table['variability'], self.results_table['id'], self.results_table['xcentroid'], self.results_table['ycentroid'], self.results_table['RA'], self.results_table['DEC']]
         
@@ -506,7 +577,8 @@ class DataAnalyser:
         Parameters
         ----------
 
-        lc: numpy array
+        lc: numpy array 2d
+            Light curve of source
             
         """
         
