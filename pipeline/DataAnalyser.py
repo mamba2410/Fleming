@@ -28,6 +28,8 @@ class DataAnalyser:
     variable_scores = None
     variable_ids = None
     variable_mask = None
+
+    results_table = None
     
 
     def __init__(self, config):
@@ -323,65 +325,6 @@ class DataAnalyser:
         return self.variable_ids
             
     
-    ## TODO: Magic numbers
-    def create_thumbnails(self, ff, adjusted=False):
-        """
-        Creates images of the brightest and dimmest frames of each source deemed variable
-
-        Parameters
-        ----------
-
-        ff: FluxFinder
-            FluxFinder object used to get a thumbnail slice
-
-            
-        """
-        
-        #for i, (path, source_id) in enumerate(Utilities.list_sources(self.config, adjusted=adjusted)):
-        for i, path, source_id in Utilities.loop_variables(self.config, self.results_table['id']):
-            t = Table.read(path, format=self.config.table_format)
-            
-            i_dim = 0
-            i_bright = 0
-            c = t['counts']
-            
-            for j in range(len(c)):
-                if c[j] > c[i_bright]:
-                    i_bright = j
-                if c[j] < c[i_dim]:
-                    i_dim = j
-            
-            i_x = self.results_table['xcentroid'][i]
-            i_y = self.results_table['ycentroid'][i]
-            
-            print("[DataAnalyser] Creating thumbnail for source id {:04}, centroid {},{}".format(
-                source_id, i_x, i_y))
-            
-            ## Magic numbers
-            dim = ff.get_thumbnail(i_dim+1, i_x, i_y, 20, True)
-            bright = ff.get_thumbnail(i_bright+1, i_x, i_y, 20, True)
-
-        
-            fig = plt.figure()
-            fig.add_subplot(1, 2, 1)
-            plt.axis('off')
-
-            dim_norm = ImageNormalize(dim, interval=ZScaleInterval(), stretch=LinearStretch())
-            plt.imshow(dim, origin='upper', cmap='gray', norm = dim_norm)
-
-            
-            fig.add_subplot(1, 2, 2)
-            plt.axis('off')
-
-            bright_norm = ImageNormalize(bright, interval=ZScaleInterval(), stretch=LinearStretch())
-            plt.imshow(bright, origin='upper', cmap='gray', norm = bright_norm)
-            
-            fname= "thumb_{}_{}{:04}{}".format(self.config.image_prefix, self.config.identifier,
-                    source_id, self.config.plot_file_extension)
-            path = os.path.join(self.config.output_dir, fname)
-
-            plt.savefig(path)
-            plt.close()
             
             
 
@@ -555,17 +498,45 @@ class DataAnalyser:
 
         """
         
-        a = [self.results_table['variability'], self.results_table['id'], self.results_table['xcentroid'], self.results_table['ycentroid'], self.results_table['RA'], self.results_table['DEC']]
+        #a = [self.results_table['variability'], self.results_table['id'], self.results_table['xcentroid'], self.results_table['ycentroid'], self.results_table['RA'], self.results_table['DEC']]
         
-        
-        Utilities.quicksort(a, False)
+        cat = Utilities.read_catalogue(self.config)
+        #indices = np.where(cat['id'] == self.variable_ids)
+        _intersect, indices, _indices2 = np.intersect1d(cat['id'], self.variable_ids,
+                return_indices=True, assume_unique=True)
+
+        t = [('id', 'int64'),
+            ('variability', 'float64'),
+            ('xcentroid', 'float64'),
+            ('ycentroid', 'float64'),
+            ('RA', 'float64'),
+            ('DEC', 'float64')]
+
+        n_variables = len(self.variable_ids)
+
+        ## Build the results table
+        ## Wanted to do it better with numpy but it's hard to name 
+        ## the columns
+        results = np.empty(n_variables, dtype=t)
+        for j, idx in enumerate(indices):
+            results['id'][j] = cat['id'][idx]
+            results['variability'][j] = self.variable_scores[idx]
+            results['xcentroid'][j] = cat['xcentroid'][idx]
+            results['ycentroid'][j] = cat['ycentroid'][idx]
+            results['RA'][j] = cat['RA'][idx]
+            results['DEC'][j] = cat['DEC'][idx]
+
 
         results_fname = "{}_results{}".format(self.config.image_prefix, self.config.standard_file_extension)
         results_path = os.path.join(self.config.output_dir, results_fname)
 
-        self.results_table.write(results_fname, format=self.config.table_format, overwrite=True)
-        Utilities.make_reg_file(self.config.output_dir,
-                self.config.image_prefix + "_variables", self.results_table)
+        np.savetxt(results_path, results)
+        #np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f')
+
+        #Utilities.make_reg_file(self.config.output_dir,
+        #        self.config.image_prefix + "_variables", self.results_table)
+
+        self.results_table = results
 
 
        
@@ -619,5 +590,66 @@ class DataAnalyser:
         lc['counts'][cosmic_index] = replacement
             
         return True
+
+
           
+    ## TODO: Magic numbers
+    def create_thumbnails(self, ff, adjusted=False):
+        """
+        Creates images of the brightest and dimmest frames of each source deemed variable
+
+        Parameters
+        ----------
+
+        ff: FluxFinder
+            FluxFinder object used to get a thumbnail slice
+
+            
+        """
+
+        print("[DataAnalyser] Making thumbnails")
+        
+        #for i, (path, source_id) in enumerate(Utilities.list_sources(self.config, adjusted=adjusted)):
+        for i, path, source_id in Utilities.loop_variables(self.config, self.results_table['id']):
+            curve = np.genfromtxt(path, dtype=[
+                ('time', 'float64'),
+                ('counts', 'float64'),
+                ]).transpose()
+            
+            c = curve['counts']
+
+            i_dim = np.argmin(c)
+            i_bright = np.argmax(c)
+            
+            i_x = self.results_table['xcentroid'][i]
+            i_y = self.results_table['ycentroid'][i]
+            
+            print("[DataAnalyser] Creating thumbnail for source id {:04}, centroid {},{}"
+                    .format(source_id, i_x, i_y))
+            
+            ## Magic numbers
+            dim = ff.get_thumbnail(i_dim+1, i_x, i_y, 20, True)
+            bright = ff.get_thumbnail(i_bright+1, i_x, i_y, 20, True)
+
+        
+            fig = plt.figure()
+            fig.add_subplot(1, 2, 1)
+            plt.axis('off')
+
+            dim_norm = ImageNormalize(dim, interval=ZScaleInterval(), stretch=LinearStretch())
+            plt.imshow(dim, origin='upper', cmap='gray', norm = dim_norm)
+
+            
+            fig.add_subplot(1, 2, 2)
+            plt.axis('off')
+
+            bright_norm = ImageNormalize(bright, interval=ZScaleInterval(), stretch=LinearStretch())
+            plt.imshow(bright, origin='upper', cmap='gray', norm = bright_norm)
+            
+            fname= "thumb_{}_{}{:04}{}".format(self.config.image_prefix, self.config.identifier,
+                    source_id, self.config.plot_file_extension)
+            path = os.path.join(self.config.output_dir, fname)
+
+            plt.savefig(path)
+            plt.close()
 

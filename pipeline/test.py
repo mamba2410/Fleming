@@ -10,6 +10,15 @@ import StreakFinder
 
 from datetime import datetime
 import os
+import shutil
+
+def setup():
+    print("[Setup] Removing results and light curves")
+    try:
+        shutil.rmtree("./workspace/results/")
+        shutil.rmtree("./workspace/adjusted_light_curves/")
+    except:
+        pass
 
 def main():
 
@@ -22,10 +31,13 @@ def main():
     config = Constants.Config(
         image_dir = "/home/callum/mnt/data/jgtdata/l137_0/0121",
         image_prefix = "l137_0",
+        #image_dir = "/home/callum/mnt/data/jgtdata/l136_5",
+        #image_prefix = "l136_5",
         has_sets = True,
         set_size = 50,
         n_sets = 7,
-        variability_threshold = 0.6
+        variability_threshold = 0.6,
+        astrometry_timeout = -1,
     )
     
     ## Reducer
@@ -98,12 +110,12 @@ def main():
 
     print("[Main] Plotting variable curves")
     ff.plot_avg_light_curve(config.avg_curve_path, show=False)
-    ff.plot_all_light_curves(variable_ids, adjusted=True, show=False)
+    #ff.plot_all_light_curves(variable_ids, adjusted=True, show=False)
+    #ff.plot_adjusted_comparison(variable_ids, show=False)
 
     source_ids = da.get_source_ids()
-    ff.plot_all_light_curves(source_ids, adjusted=True)
-
-    exit()
+    #ff.plot_all_light_curves(source_ids, adjusted=True)
+    #ff.plot_adjusted_comparison(source_ids, show=False)
 
     print("[Main] Outputting results")
     da.output_results()
@@ -113,4 +125,5 @@ def main():
 
 
 if __name__ == "__main__":
+    setup()
     main()

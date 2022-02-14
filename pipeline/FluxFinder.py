@@ -234,8 +234,6 @@ class FluxFinder:
             ## Only one light curve per file
             np.savetxt(path, light_curves[j].transpose())
     
-    
-    
             
         
         

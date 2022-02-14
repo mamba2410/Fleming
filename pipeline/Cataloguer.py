@@ -165,14 +165,14 @@ class Cataloguer:
         self.wcs = self.get_wcs_header(image_file, solve=solve)
         
         ## Make two new coloums in source table, set to zero
-        #sources['RA'] = sources['xcentroid'] * 0
-        #sources['DEC'] = sources['xcentroid'] * 0
+        sources['RA'] = sources['xcentroid'] * 0
+        sources['DEC'] = sources['xcentroid'] * 0
     
         ## Replace the zeroes with ra and dec
-        #for i in range(self.n_sources):
-        #    ra, dec = self.wcs.all_pix2world(sources['xcentroid'][i], sources['ycentroid'][i], 0) 
-        #    sources['RA'][i] = ra
-        #    sources['DEC'][i] = dec
+        for i in range(self.n_sources):
+            ra, dec = self.wcs.all_pix2world(sources['xcentroid'][i], sources['ycentroid'][i], 0) 
+            sources['RA'][i] = ra
+            sources['DEC'][i] = dec
     
 
 

@@ -99,8 +99,6 @@ def main():
     ff.plot_avg_light_curve(config.avg_curve_path, show=False)
     ff.plot_all_light_curves(variable_ids, adjusted=True, show=False)
 
-    exit()
-
     print("[Main] Outputting results")
     da.output_results()
     da.create_thumbnails(ff)

@@ -208,6 +208,8 @@ def read_catalogue(config):
         ('peak', 'float64'),
         ('flux', 'float64'),
         ('mag', 'float64'),
+        ('RA', 'float64'),
+        ('DEC', 'float64'),
         ],
         skip_header=1)
 
