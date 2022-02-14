@@ -530,8 +530,8 @@ class DataAnalyser:
         results_fname = "{}_results{}".format(self.config.image_prefix, self.config.standard_file_extension)
         results_path = os.path.join(self.config.output_dir, results_fname)
 
-        np.savetxt(results_path, results)
-        #np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f')
+        #np.savetxt(results_path, results)
+        np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f')
 
         #Utilities.make_reg_file(self.config.output_dir,
         #        self.config.image_prefix + "_variables", self.results_table)

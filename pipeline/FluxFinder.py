@@ -331,7 +331,7 @@ class FluxFinder:
     def plot_all_light_curves(self, ids, adjusted=False, show=False):
         for _i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
             self.plot_light_curve(
-                    source_id=source_id, curve_path=path, adjusted=adjusted, show=show, close=False)
+                    source_id=source_id, curve_path=path, adjusted=adjusted, show=show, close=True)
 
     def plot_adjusted_comparison(self, ids, show=False):
         for _i, _path, source_id in Utilities.loop_variables(self.config, ids, adjusted=False):

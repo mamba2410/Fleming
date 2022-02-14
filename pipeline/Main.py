@@ -13,6 +13,8 @@ import os
 
 def main():
 
+    HOME = ospath.expanduser("~")
+
     start_time = datetime.now()
     print("Started at {}".format(start_time.strftime("%H:%M:%S")))
     
@@ -20,11 +22,11 @@ def main():
     ## Config object for a run of data
     ## See `Constants.py` for available options and default values
     config = Constants.Config(
-        image_dir = "/home/callum/mnt/data/jgtdata/l137_0/0121",
-        image_prefix = "l137_0",
+        image_dir = os.path.expanduser("~/mnt/data/jgtdata/l136_0"),
+        image_prefix = "l136",
         has_sets = True,
+        n_sets = 9,
         set_size = 50,
-        n_sets = 7,
     )
     
     ## Reducer
@@ -46,7 +48,7 @@ def main():
             config.image_format_str
             .format(catalogue_set_number, catalogue_image_number))
 
-    n_sources = c.generate_catalogue(catalogue_image_path, solve=False)
+    n_sources = c.generate_catalogue(catalogue_image_path, solve=True)
     c.generate_image_times()
 
     cataloguer_time = Utilities.finished_job("cataloguing stars", reducer_time)
