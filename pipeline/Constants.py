@@ -54,8 +54,6 @@ class Config:
             streak_subdir       = "streaks",
             moving_obj_subdir   = "moving_objects",
 
-            time_fname          = "times",
-            shift_fname         = "shift",
             id_map_fname        = "id_mapper",
             moving_obj_fname    = "moving_obj",
             astrometry_job_fname = "astrometryjob",
@@ -63,6 +61,8 @@ class Config:
 
             reduced_prefix      = "r_",
             catalogue_prefix    = "catalogue_",
+            time_prefix         = "times_",
+            shift_prefix        = "shift_",
             flux_prefix         = "flux_",
             bias_prefix         = "bias",
             flat_prefix         = "dflat",
@@ -114,9 +114,9 @@ class Config:
         self.streak_dir             = os.path.join(self.workspace_dir, streak_subdir)
         self.moving_obj_dir         = os.path.join(self.workspace_dir, moving_obj_subdir)
 
-        fname = "{}{}".format(time_fname, standard_file_extension)
+        fname = "{}{}{}".format(time_prefix, image_prefix, standard_file_extension)
         self.time_path              = os.path.join(self.workspace_dir, fname)
-        fname = "{}{}".format(shift_fname, standard_file_extension)
+        fname = "{}{}{}".format(shift_prefix, image_prefix, standard_file_extension)
         self.shift_path             = os.path.join(self.workspace_dir, fname)
         fname = "{}{}".format(id_map_fname, standard_file_extension)
         self.id_map_path            = os.path.join(self.workspace_dir, fname)
