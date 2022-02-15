@@ -110,7 +110,7 @@ def main():
 
     print("[Main] Plotting variable curves")
     ff.plot_avg_light_curve(config.avg_curve_path, show=False)
-    #ff.plot_all_light_curves(variable_ids, adjusted=True, show=False)
+    ff.plot_all_light_curves(variable_ids, adjusted=True, show=False)
     #ff.plot_adjusted_comparison(variable_ids, show=False)
 
     source_ids = da.get_source_ids()

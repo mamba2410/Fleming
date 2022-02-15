@@ -188,7 +188,7 @@ class DataAnalyser:
 
     ## TODO: Why using index range?
     ## TODO: Better way of determining score
-    def get_variable_score(self, source_index, adjusted=False):
+    def get_variable_score(self, source_id, sorted_ids, sorted_stds):
         """
         Returns a score determining the variability of the star.
         
@@ -206,6 +206,7 @@ class DataAnalyser:
 
         """
         
+        source_index = np.where(sorted_ids == source_id)[0][0]
        
         llim = source_index - self.config.check_radius
         ulim = source_index + self.config.check_radius + 1
@@ -215,19 +216,11 @@ class DataAnalyser:
         
         if ulim > self.n_sources:
             ulim = self.n_sources
-        
-        ## Debug
-        #llim = 0
-        #ulim = self.n_sources
+
 
         ## Median of standard deviations
-        ## TODO: Why index range instead of flux range?
-        if adjusted:
-            median_std = np.median(self.adjusted_source_stds[llim:ulim])
-            variable_score = self.adjusted_source_stds[source_index]/median_std - 1
-        else:
-            median_std = np.median(self.source_stds[llim:ulim])
-            variable_score = self.source_stds[source_index]/median_std - 1
+        median_std = np.median(sorted_stds[llim:ulim])
+        variable_score = sorted_stds[source_index]/median_std - 1
 
         #std_threshold = median_std * (1 + self.config.variability_threshold)
 
@@ -239,19 +232,6 @@ class DataAnalyser:
         return variable_score
         
         
-    def get_source_ids(self):
-        """
-        Give all the IDs of each source known by the object.
-
-        Returns
-        -------
-
-        self.source_ids: numpy array
-            array of all source ids known
-
-        """
-
-        return self.source_ids
 
     ## TODO: Bug of id0000 never deemed variable
     ## TODO: Exclude 'problematic stars' (eg stars on edge of field)
@@ -278,6 +258,13 @@ class DataAnalyser:
         cat = Utilities.read_catalogue(self.config)
         n_sources_cat = len(cat['id'])
 
+        brightness_indices = np.flip(np.argsort(cat['flux']))
+        sorted_ids = cat['id'][brightness_indices]
+        if adjusted:
+            sorted_stds = self.adjusted_source_stds[brightness_indices]
+        else:
+            sorted_stds = self.source_stds[brightness_indices]
+
         if n_sources_cat != self.n_sources:
             print("[DEBUG] Catalogue has {} sources, DA has {}"
                     .format(n_sources_cat, self.n_sources))
@@ -286,8 +273,10 @@ class DataAnalyser:
         self.variable_scores = np.zeros(self.n_sources)
 
         ## Loop over sources in the catalogue
-        for i in range(self.n_sources):
-            self.variable_scores[i] = self.get_variable_score(i, adjusted=adjusted)
+        #for i in range(self.n_sources):
+        for i, _path, source_id in Utilities.loop_variables(self.config, self.source_ids):
+            self.variable_scores[i] = self.get_variable_score(
+                    source_id, sorted_ids, sorted_stds)
 
         self.variable_mask = np.where(self.variable_scores > self.config.variability_threshold)[0]
         self.variable_ids = np.copy(self.source_ids[self.variable_mask])
@@ -325,9 +314,19 @@ class DataAnalyser:
         return self.variable_ids
             
     
-            
-            
+    def get_source_ids(self):
+        """
+        Give all the IDs of each source known by the object.
 
+        Returns
+        -------
+
+        self.source_ids: numpy array
+            array of all source ids known
+
+        """
+
+        return self.source_ids
             
         
         

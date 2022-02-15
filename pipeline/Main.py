@@ -13,7 +13,7 @@ import os
 
 def main():
 
-    HOME = ospath.expanduser("~")
+    HOME = os.path.expanduser("~")
 
     start_time = datetime.now()
     print("Started at {}".format(start_time.strftime("%H:%M:%S")))
@@ -22,10 +22,10 @@ def main():
     ## Config object for a run of data
     ## See `Constants.py` for available options and default values
     config = Constants.Config(
-        image_dir = os.path.expanduser("~/mnt/data/jgtdata/l136_0"),
-        image_prefix = "l136",
+        image_dir = os.path.expanduser("~/mnt/data/jgtdata/l137_0/0121"),
+        image_prefix = "l137_0",
         has_sets = True,
-        n_sets = 9,
+        n_sets = 7,
         set_size = 50,
     )
     
