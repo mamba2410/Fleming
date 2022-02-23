@@ -84,6 +84,10 @@ class Reducer:
 
         """
 
+        ## If we have no flats, give even response
+        if len(self.flatfield_frames) == 0:
+            self.flatfield_frames.append(self.bias_frames[0] * 0 + 1)
+
         self.master_flat = np.median(self.flatfield_frames)
         #get median of flatfield
         self.flat_median = np.median(self.master_flat)
