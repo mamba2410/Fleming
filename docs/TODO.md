@@ -14,6 +14,10 @@ Runtime warnings/invalid values on l137_0
 ## Improvements
 
 - New way of determining variables?
+- Take field with obvious variable, implement simple variable detections to cut down dataset
+- Need sigma clipping
+- Can FluxFinder give errors?
+- Complicated way of finding variables:
 	- smooth the curve with running optimal average
 	- sigma clip
 	- smooth again
@@ -23,11 +27,10 @@ Runtime warnings/invalid values on l137_0
 - raw/reduced images to be stored in separate directory
 - Stack images and use that as the catalogue image?
 - Assumes catalogue is first image (where exactly?)
-- sigma clip light curves?
-- concept of categorising light curves? messy (wide std), flat (very unlikely variable), human (unsure)
 - Thumbnail size in `Constants.py`
 - Make a `Catalogue` class which has numpy array of sources to save file reading.
 - Docs on the readme about the 'public' functions that users can run.
+- Periodogram 
 
 ## Possible bugs
 

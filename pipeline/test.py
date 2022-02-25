@@ -29,15 +29,14 @@ def main():
     ## Config object for a run of data
     ## See `Constants.py` for available options and default values
     config = Constants.Config(
-        image_dir = "/home/callum/mnt/data/jgtdata/l137_0/0121",
-        image_prefix = "l137_0",
+        #image_dir = "/home/callum/mnt/data/jgtdata/l137_0/0121",
+        #image_prefix = "l137_0",
         #image_dir = "/home/callum/mnt/data/jgtdata/l136_5",
         #image_prefix = "l136_5",
-        has_sets = True,
-        set_size = 50,
-        n_sets = 7,
-        variability_threshold = 0.6,
-        astrometry_timeout = -1,
+        image_dir = os.path.expanduser("~/mnt/jgt/2020/0212"),
+        image_prefix = "l141_5",
+        n_sets = 8,
+        #variability_threshold = 0.2,
     )
     
     ## Reducer
@@ -119,6 +118,7 @@ def main():
 
     print("[Main] Outputting results")
     da.output_results()
+    da.plot_means_and_stds()
     da.create_thumbnails(ff)
     
     _ = Utilities.finished_job("everything", start_time)

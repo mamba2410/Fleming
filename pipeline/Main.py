@@ -22,11 +22,14 @@ def main():
     ## Config object for a run of data
     ## See `Constants.py` for available options and default values
     config = Constants.Config(
-        image_dir = os.path.expanduser("~/mnt/data/jgtdata/l137_0/0121"),
-        image_prefix = "l137_0",
+        image_dir = os.path.expanduser("~/mnt/jgt/2020/0212"),
+        image_prefix = "l141_5",
+        #bias_prefix = "bias",
+        #flat_prefix = "dflat6",
+        n_sets = 8,
         has_sets = True,
-        n_sets = 7,
         set_size = 50,
+        variability_threshold = 0.1,
     )
     
     ## Reducer

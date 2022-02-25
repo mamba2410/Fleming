@@ -137,7 +137,7 @@ class DataAnalyser:
         return source_means, source_stds, source_medians
 
 
-    def plot_means_and_stds(self, adjusted=False):
+    def plot_means_and_stds(self, adjusted=True):
         """
         Plot means against standard deviations of each source.
         Overplotted in red are the stars deemed variable.
@@ -481,6 +481,8 @@ class DataAnalyser:
                 ('counts', 'float64'),
                 ]).transpose()
 
+            ## TODO: sigma clip
+            ## TODO: move this (to flux finder?)
             if self.remove_cosmics(curve, stds[i]):
                 #print("[DataAnalyser] Removed cosmics on id {}".format(source_id))
                 np.savetxt(path, curve)
