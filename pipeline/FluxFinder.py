@@ -212,8 +212,8 @@ class FluxFinder:
                 
 
                 #if median has reasonable value
-                if source_table['median'][j] > 0: 
-                    light_curves[j][1][image_index] = float(source_table['residual_aperture_sum_med'][j])
+                #if source_table['median'][j] > 0: 
+                light_curves[j][1][image_index] = float(source_table['residual_aperture_sum_med'][j])
 
                 #else:
                 #    print("[FluxFinder] Rejecting value for source {}, median is {}"

@@ -32,6 +32,11 @@ def main():
         image_dir = os.path.expanduser("~/mnt/jgt/2020/0212"),
         image_prefix = "l141_5",
         n_sets = 8,
+<<<<<<< HEAD
+=======
+        #variability_threshold = 0.3,
+        #min_signal_to_noise = 4,
+>>>>>>> 54f3cf3 (flux: counts off edge are negative)
     )
     
     ## Reducer
@@ -78,7 +83,7 @@ def main():
 
     ## Find the flux of each star in each image then create a light curve
     ## Write the light curves to file
-    #ff.make_light_curves()
+    ff.make_light_curves()
 
     light_curve_time = Utilities.finished_job("making light curves", shift_finder_time)
 
