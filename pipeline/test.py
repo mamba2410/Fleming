@@ -29,14 +29,9 @@ def main():
     ## Config object for a run of data
     ## See `Constants.py` for available options and default values
     config = Constants.Config(
-        #image_dir = "/home/callum/mnt/data/jgtdata/l137_0/0121",
-        #image_prefix = "l137_0",
-        #image_dir = "/home/callum/mnt/data/jgtdata/l136_5",
-        #image_prefix = "l136_5",
         image_dir = os.path.expanduser("~/mnt/jgt/2020/0212"),
         image_prefix = "l141_5",
         n_sets = 8,
-        #variability_threshold = 0.2,
     )
     
     ## Reducer

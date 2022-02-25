@@ -262,8 +262,10 @@ class DataAnalyser:
         sorted_ids = cat['id'][brightness_indices]
         if adjusted:
             sorted_stds = self.adjusted_source_stds[brightness_indices]
+            sorted_medians = self.adjusted_source_medians[brightness_indices]
         else:
             sorted_stds = self.source_stds[brightness_indices]
+            sorted_medians = self.source_medians[brightness_indices]
 
         if n_sources_cat != self.n_sources:
             print("[DEBUG] Catalogue has {} sources, DA has {}"
@@ -278,7 +280,12 @@ class DataAnalyser:
             self.variable_scores[i] = self.get_variable_score(
                     source_id, sorted_ids, sorted_stds)
 
-        self.variable_mask = np.where(self.variable_scores > self.config.variability_threshold)[0]
+        signal_to_noise = sorted_medians/sorted_stds
+        self.variable_mask = np.where(
+                (self.variable_scores > self.config.variability_threshold)
+                & (self.variable_scores < self.config.variability_max)
+                & (signal_to_noise > self.config.min_signal_to_noise)
+                )[0]
         self.variable_ids = np.copy(self.source_ids[self.variable_mask])
 
             #else:

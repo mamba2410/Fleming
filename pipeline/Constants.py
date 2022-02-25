@@ -76,7 +76,8 @@ class Config:
             table_format        = "ascii",
 
             variability_threshold   = 0.8,
-            check_radius            = 10,
+            variability_max         = 5,
+            check_radius            = 5,
             cosmic_threshold        = 5,
             flux_cutoff             = 100,
             edge_limit              = 50,
@@ -84,6 +85,7 @@ class Config:
             outer_radius            = 13,
             moving_obj_check_image  = 30,
             n_reference_stars       = 10,
+            min_signal_to_noise     = 2,
 
             image_width         = 2432,
             image_height        = 1616,
@@ -142,6 +144,7 @@ class Config:
         self.table_format       = table_format
 
         self.variability_threshold  = variability_threshold
+        self.variability_max        = variability_max
         self.check_radius           = check_radius
         self.cosmic_threshold       = cosmic_threshold
         self.flux_cutoff            = flux_cutoff
@@ -150,6 +153,7 @@ class Config:
         self.outer_radius           = outer_radius
         self.moving_obj_check_image = moving_obj_check_image
         self.n_reference_stars      = n_reference_stars
+        self.min_signal_to_noise    = min_signal_to_noise
 
         self.image_width        = image_width
         self.image_height       = image_height
