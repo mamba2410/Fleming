@@ -288,19 +288,22 @@ class FluxFinder:
         
         times = curve['time']
         fluxes = curve['counts']
+        err = curve['counts_err']
         
 
         mean = np.mean(fluxes)
         median = np.median(fluxes)
         #normalised_fluxes = fluxes / mean
         normalised_fluxes = fluxes/median
+        normalised_err    = err/median
         
         minimum = min(normalised_fluxes)
         maximum = max(normalised_fluxes)
     
         ## TODO: Multiple axes, seconds and minutes?
         #plt.figure(figsize = (12, 8))
-        plt.scatter(times, normalised_fluxes, s=5, marker='x');
+        #plt.scatter(times, normalised_fluxes, s=5, marker='x');
+        plt.errorbar(times, normalised_fluxes, yerr=normalised_err, fmt='.')
         plt.xlabel("Time [seconds]")
         plt.ylabel("Relative flux [counts/mean]")
 
@@ -435,6 +438,7 @@ class FluxFinder:
             curve['counts'] /= avg_curve['counts']
             med = np.median(curve['counts'])
             curve['counts'] /= med
+            curve['counts_err'] /= avg_curve['counts'] * med
             
             fname = self.config.source_format_str.format(source_id)
             out_path = os.path.join(self.config.adjusted_curve_dir, fname)

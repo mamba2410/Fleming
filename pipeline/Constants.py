@@ -184,6 +184,11 @@ class Config:
         ## ===============
         ## Setting up other stuff
 
+        ## numpy data type for light curve table
+        self.light_curve_dtype = [
+            ('time', 'float64'),
+            ('counts', 'float64'),
+            ('counts_err', 'float64')]
 
         ## Read in astrometry api key from file
         with open(os.path.join(pipeline_root, api_key_file)) as f:

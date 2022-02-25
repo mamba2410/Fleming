@@ -412,12 +412,14 @@ class DataAnalyser:
         ## TODO: Make this config-able
         n_measures = self.config.n_sets*self.config.set_size
         total_counts = np.zeros(n_measures)
+        total_vars = np.zeros(n_measures)
 
         for i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=False):
 
             curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
             
             fluxes = curve['counts']
+            errs = curve['counts_err']
 
             #print("Source id: {}; {}, {}".format(source_id, np.min(fluxes), np.max(fluxes)))
 
@@ -432,18 +434,21 @@ class DataAnalyser:
             ## so we end up with nan here
             if source_median > 0:
                 fluxes /= source_median
+                errs /= source_median
                 total_counts += fluxes
+                total_vars += errs*errs
 
             
         
         ## Create average value at each measurement
         mean_counts = total_counts/n_measures
+        mean_err = np.sqrt(total_vars)/n_measures
 
         ## TODO: Proper sigma clipping
-        delete_idx = np.where(mean_counts>10)[0]
-        mean_counts[delete_idx] = 1
+        delete_idx = np.where(mean_err>1)[0]
+        mean_counts[delete_idx] = 0
 
-        write_me = np.array([curve['time'], mean_counts]).transpose()
+        write_me = np.array([curve['time'], mean_counts, mean_err]).transpose()
 
         np.savetxt(self.config.avg_curve_path, write_me)
 
