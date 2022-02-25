@@ -132,6 +132,7 @@ class FluxFinder:
         phot_table2['median'] = phot_table2['aperture_sum_1']*0 - 1e9
         phot_table2['residual_aperture_sum_mean'] = phot_table2['aperture_sum_1']*0 - 1e9
         phot_table2['residual_aperture_sum_med'] = phot_table2['aperture_sum_1']*0 - 1e9
+        phot_table2['counts_err'] = phot_table2['aperture_sum_1']*0 + 1e9
 
         for i in range(n_sources_phot):
             
@@ -160,6 +161,12 @@ class FluxFinder:
                 final_sum = phot_table2['aperture_sum_0'][i] - bkg_sum
                 phot_table2['residual_aperture_sum_med'][i] = final_sum
 
+                # Calc errors (using method from 2nd year ObsTech lectures)
+                star_var = phot_table2['aperture_sum_0'] 
+                bkg_var  = (star_apertures[i].area/background_annuli[i].area)**2 * phot_table2['aperture_sum_0'][i]
+                counts_err = np.sqrt(star_var + bkg_var)
+                phot_table2['counts_err'] = counts_err
+
             ## For debug purposes
             #else:
             #    print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
@@ -185,9 +192,9 @@ class FluxFinder:
 
         ## Light curves
         ## Dim 0: each source
-        ## Dim 1: time/counts
+        ## Dim 1: time/counts/error
         ## Dim 2: measurement number
-        light_curves = np.zeros((self.n_sources, 2, n_times))
+        light_curves = np.zeros((self.n_sources, 3, n_times))
           
         ## iterate over each image
         ## image_index iterates over each measurement
@@ -214,6 +221,7 @@ class FluxFinder:
                 #if median has reasonable value
                 #if source_table['median'][j] > 0: 
                 light_curves[j][1][image_index] = float(source_table['residual_aperture_sum_med'][j])
+                light_curves[j][2][image_index] = float(source_table['counts_err'][j])
 
                 #else:
                 #    print("[FluxFinder] Rejecting value for source {}, median is {}"
