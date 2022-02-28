@@ -276,10 +276,7 @@ class FluxFinder:
                 curve_path = os.path.join(self.config.light_curve_dir, fname)
 
         #table = Table.read(curve_path, format=self.config.table_format)
-        curve = np.genfromtxt(curve_path, dtype=[
-            ('time', 'float64'),
-            ('counts', 'float64'),
-            ]).transpose()
+        curve = np.genfromtxt(curve_path, dtype=self.config.light_curve_dtype).transpose()
         
         times = curve['time']
         fluxes = curve['counts']
@@ -419,17 +416,12 @@ class FluxFinder:
         """
         print("[DEBUG] Calling `divide_by_average` in FluxFinder")
 
-        avg_curve = np.genfromtxt(self.config.avg_curve_path, dtype=[
-            ('time', 'float64'),
-            ('counts', 'float64'),
-            ]).transpose()
+        avg_curve = np.genfromtxt(self.config.avg_curve_path,
+                dtype=self.config.light_curve_dtype).transpose()
 
         #for all files
         for path, source_id in Utilities.list_sources(self.config, adjusted=False):
-            curve = np.genfromtxt(path, dtype=[
-                ('time', 'float64'),
-                ('counts', 'float64'),
-                ]).transpose()
+            curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
 
             
             curve['counts'] /= avg_curve['counts']

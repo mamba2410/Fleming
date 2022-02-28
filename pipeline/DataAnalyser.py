@@ -101,10 +101,7 @@ class DataAnalyser:
         for i, path, source_id in Utilities.loop_variables(self.config, source_ids, adjusted=adjusted):
             
             ## Read light curve data from file
-            lc = np.genfromtxt(path, dtype=[
-                ('time', 'float64'),
-                ('counts', 'float64')
-                ])
+            lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
 
             ## Get number of measurements
             n_measures = len(lc['time'])
@@ -273,18 +270,22 @@ class DataAnalyser:
 
 
         self.variable_scores = np.zeros(self.n_sources)
+        mins = np.zeros(self.n_sources)
 
         ## Loop over sources in the catalogue
         #for i in range(self.n_sources):
-        for i, _path, source_id in Utilities.loop_variables(self.config, self.source_ids):
+        for i, path, source_id in Utilities.loop_variables(self.config, self.source_ids):
             self.variable_scores[i] = self.get_variable_score(
                     source_id, sorted_ids, sorted_stds)
+            lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
+            mins[i] = np.min(lc['counts'])
 
         signal_to_noise = sorted_medians/sorted_stds
         self.variable_mask = np.where(
                 (self.variable_scores > self.config.variability_threshold)
                 & (self.variable_scores < self.config.variability_max)
                 & (signal_to_noise > self.config.min_signal_to_noise)
+                & (mins > 0)
                 )[0]
         self.variable_ids = np.copy(self.source_ids[self.variable_mask])
 
@@ -414,10 +415,7 @@ class DataAnalyser:
 
         for i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=False):
 
-            curve = np.genfromtxt(path, dtype=[
-                ('time', 'float64'),
-                ('counts', 'float64'),
-                ]).transpose()
+            curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
             
             fluxes = curve['counts']
 
@@ -483,10 +481,7 @@ class DataAnalyser:
 
         ## Remove any cosmic rays in the light curve
         for i, path, source_id in Utilities.loop_variables(self.config, self.source_ids, adjusted=True):
-            curve = np.genfromtxt(path, dtype=[
-                ('time', 'float64'),
-                ('counts', 'float64'),
-                ]).transpose()
+            curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
 
             ## TODO: sigma clip
             ## TODO: move this (to flux finder?)
@@ -619,10 +614,7 @@ class DataAnalyser:
         
         #for i, (path, source_id) in enumerate(Utilities.list_sources(self.config, adjusted=adjusted)):
         for i, path, source_id in Utilities.loop_variables(self.config, self.results_table['id']):
-            curve = np.genfromtxt(path, dtype=[
-                ('time', 'float64'),
-                ('counts', 'float64'),
-                ]).transpose()
+            curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
             
             c = curve['counts']
 

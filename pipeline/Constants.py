@@ -197,6 +197,10 @@ class Config:
         self.source_format_str      = "{}_{}{}{}".format(
                 image_prefix, identifier, "{:04}", standard_file_extension)
 
+        self.light_curve_dtype = [
+                ("time", "float64"),
+                ("counts", "float64"),
+            ]
 
         ## ===============
         ## Create directories if they don't exist
