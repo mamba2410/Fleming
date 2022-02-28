@@ -3,6 +3,7 @@ from astropy.io.fits import getdata
 from astropy.io.fits import getheader
 from astropy.io.fits import HDUList
 from astropy.io.fits import PrimaryHDU
+from astropy.io.fits import CompImageHDU
 from astropy.io.fits import getval
 import Utilities
 import numpy as np
@@ -187,9 +188,12 @@ class Reducer:
                             data[x + k][y + l] = 4.2/n * 8000
                     
                 #export processed image to file 
-                hdu = PrimaryHDU(data, head)
-                hdul = HDUList([hdu], None)
-                hdul.writeto(reduced_path, overwrite=True)
+                #hdu = PrimaryHDU(data, head)
+                hdu = CompImageHDU(data, head)
+                hdu.scale("uint16")
+                #hdul = HDUList([hdu], None)
+                #hdul.writeto(reduced_path, overwrite=True)
+                hdu.writeto(reduced_path, overwrite=True)
 
                     
     
