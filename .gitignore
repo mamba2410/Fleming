@@ -5,5 +5,6 @@ workspace/
 keep_workspace/
 images/
 astrometry_api_key.txt
+candidates.md
 *_results.txt
 *.reg
