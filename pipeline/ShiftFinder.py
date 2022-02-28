@@ -90,6 +90,14 @@ class ShiftFinder:
         if yhigh > self.config.image_height:
             yhigh = self.config.image_height
 
+        ## 7 comes from centroid_2dg requirements
+        ## TODO: Pick new reference star if this triggers
+        ## TODO: Make better
+        if (yhigh-ylow < 7) or (xhigh-xlow < 7):
+            print("[ShiftFinder] Error: Reference star at {:.02},{:.02} out of frame"
+                    .format(previous_x, previous_y))
+            return previous_x, previous_y
+
         # Select just the box around the star
         data_square = data_array[ylow:yhigh,xlow:xhigh]
 
