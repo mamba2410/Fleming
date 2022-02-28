@@ -33,16 +33,15 @@ def main():
     config = Constants.Config(
         image_dir = os.path.expanduser("~/mnt/jgt/2020/0212"),
         image_prefix = "l141_5",
-        n_sets = 8,
+        n_sets = 1,
     )
     
     ## Reducer
     ## Takes raw images, subtracts bias and divides by flat field
-    #r = Reducer.Reducer(config, "No filter")    ## Only "No filter" for Trius
-    #r.reduce(skip_existing=True)    ## Skip images that have already been reduced
+    r = Reducer.Reducer(config, "No filter")    ## Only "No filter" for Trius
+    r.reduce(skip_existing=False)    ## Skip images that have already been reduced
 
     reducer_time = Utilities.finished_job("reducing images", start_time)
-    
     
     ## Cataloguer
     ## Creates a catalogue of stars found in the given image
@@ -124,6 +123,46 @@ def main():
     _ = Utilities.finished_job("everything", start_time)
 
 
+## Rename all the RAW images to a more standard format
+## Manually have to enter known fields which do not conform
+## TODO: Copy flats for ones that need it?
+def rename():
+    ## Ideal format:
+    ## lxxx_y_s_iii.fit
+    ## xxx: llongitude integer part
+    ## y: longitude decimal part, 0 or 5
+    ## s: set number, 1..n_sets
+    ## iii: image_number, 001..050 
+
+    ## l141 first set
+    base_path = os.path.expanduser("~/mnt/jgt/2020/0206Trius")
+    for i in range(1, 51):
+        os.rename(
+                os.path.join(base_path, "l141_{:03d}.fit".format(i)),
+                os.path.join(base_path, "l141_1_{:03d}.fit".format(i))
+        )
+
+    ## l140.5 -> l140_5
+    base_path = os.path.expanduser("~/mnt/jgt/2019/0221")
+    for s in range(1, 8):
+        for i in range(1, 51):
+            os.rename(
+                    os.path.join(base_path, "l140.5_{:1d}_{:03d}.fit".format(s, i)),
+                    os.path.join(base_path, "l140_5_{:1d}_{:03d}.fit".format(s, i))
+            )
+
+    ## L140 -> l140_0
+    base_path = os.path.expanduser("~/mnt/jgt/2019/0218")
+    for s in range(1, 8):
+        for i in range(1, 51):
+            os.rename(
+                    os.path.join(base_path, "L140_{:1d}_{:03d}.fit".format(s, i)),
+                    os.path.join(base_path, "l140_0_{:1d}_{:03d}.fit".format(s, i))
+            )
+
+
+
 if __name__ == "__main__":
-    #setup()
+    setup()
     main()
+    #rename()
