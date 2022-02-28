@@ -52,15 +52,15 @@ class Reducer:
 
         """
 
-        for file in os.listdir(self.config.image_dir):
+        for file in os.listdir(self.config.raw_image_dir):
             
             if file[:len(self.config.bias_prefix)] == self.config.bias_prefix:
                 self.bias_frames.append(getdata(
-                    os.path.join(self.config.image_dir, file)))
+                    os.path.join(self.config.raw_image_dir, file)))
 
             if file[:len(self.config.flat_prefix)] == self.config.flat_prefix:
                 self.flatfield_frames.append(getdata(
-                    os.path.join(self.config.image_dir, file)))
+                    os.path.join(self.config.raw_image_dir, file)))
       
         print("[Reducer] Found {} bias frames".format(len(self.bias_frames)))
         print("[Reducer] Found {} flatfield frames".format(len(self.flatfield_frames)))
@@ -108,7 +108,7 @@ class Reducer:
         self.create_master_flat()
         
         #loop througheach file in directory 
-        for file, set_number, image_number in Utilities.list_images(self.config, self.config.image_dir, reduced=False):
+        for file, set_number, image_number in Utilities.list_images(self.config, self.config.raw_image_dir, reduced=False):
 
             #if raw images are stored in sets
             if(self.config.has_sets):
@@ -141,7 +141,7 @@ class Reducer:
             else:
                 print("[Reducer] Creating reduced image '{}'".format(reduced_path))
 
-            path = os.path.join(self.config.image_dir, file)
+            path = os.path.join(self.config.raw_image_dir, file)
             #get image filter value
             image_filter=getval(path, 'FILTER',ignore_missing_end=True)
 
@@ -188,12 +188,16 @@ class Reducer:
                             data[x + k][y + l] = 4.2/n * 8000
                     
                 #export processed image to file 
-                #hdu = PrimaryHDU(data, head)
-                hdu = CompImageHDU(data, head)
-                hdu.scale("uint16")
-                #hdul = HDUList([hdu], None)
-                #hdul.writeto(reduced_path, overwrite=True)
-                hdu.writeto(reduced_path, overwrite=True)
+                compressed = False
+                if compressed:
+                    hdu = CompImageHDU(data, head)
+                    hdu.scale("uint16")
+                    hdu.writeto(reduced_path, overwrite=True)
+                else:
+                    hdu = PrimaryHDU(data, head)
+                    hdu.scale("uint16")
+                    hdul = HDUList([hdu], None)
+                    hdul.writeto(reduced_path, overwrite=True)
 
                     
     

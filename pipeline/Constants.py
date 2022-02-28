@@ -47,6 +47,8 @@ class Config:
             workspace_subdir    = "workspace",
             image_subdir        = "../images",
             image_dir           = "",
+            raw_image_subdir    = "../raw_images",
+            raw_image_dir       = "",
             flux_subdir         = "fluxes",
             light_curve_subdir  = "light_curves",
             adjusted_curve_subdir = "adjusted_light_curves",
@@ -109,7 +111,13 @@ class Config:
         if len(image_dir) > 0:
             self.image_dir = image_dir
         else:
-            self.image_dir              = os.path.join(self.workspace_dir, image_subdir)
+            self.image_dir = os.path.join(self.workspace_dir, image_subdir)
+
+        if len(raw_image_dir) > 0:
+            self.raw_image_dir = raw_image_dir
+        else:
+            self.raw_image_dir = os.path.join(self.workspace_dir, raw_image_subdir)
+
         self.flux_dir               = os.path.join(self.workspace_dir, flux_subdir)
         self.light_curve_dir        = os.path.join(self.workspace_dir, light_curve_subdir)
         self.adjusted_curve_dir     = os.path.join(self.workspace_dir, adjusted_curve_subdir)
@@ -210,6 +218,9 @@ class Config:
 
         if not os.path.exists(self.image_dir):
             os.mkdir(self.image_dir)
+
+        if not os.path.exists(self.raw_image_dir):
+            os.mkdir(self.raw_image_dir)
 
         if not os.path.exists(self.flux_dir):
             os.mkdir(self.flux_dir)

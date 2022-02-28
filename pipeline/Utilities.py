@@ -86,7 +86,7 @@ def list_images(config, directory, reduced=True):
     else:
         fmt = config.raw_image_format_str
 
-    for f in os.listdir(config.image_dir):
+    for f in os.listdir(directory):
         res = parse.parse(fmt, f)
         if res != None:
             set_number = int(res.fixed[0])
