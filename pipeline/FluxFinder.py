@@ -303,11 +303,11 @@ class FluxFinder:
         #plt.ylim(0, 2)
         
         if source_id == None:
-            fname = "{}_LC_avg.jpg".format(self.config.image_prefix)
+            fname = "LC_{}_avg.jpg".format(self.config.image_prefix)
             plt.title("Light curve for average of sources (adjusted={})"
                 .format(adjusted))
         elif source_id >= 0:
-            fname = "{}_LC_{}{:04}.jpg".format(
+            fname = "LC_{}_{}{:04}.jpg".format(
                 self.config.image_prefix, self.config.identifier, source_id)
             plt.title("Light curve for source {:04} (adjusted={})"
                 .format(source_id, adjusted))

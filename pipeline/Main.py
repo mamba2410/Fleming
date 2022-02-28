@@ -11,26 +11,47 @@ import StreakFinder
 from datetime import datetime
 import os
 
+HOME = os.path.expanduser("~")
+
 def main():
 
-    HOME = os.path.expanduser("~")
-
     start_time = datetime.now()
-    print("Started at {}".format(start_time.strftime("%H:%M:%S")))
-    
-    ## Config
+    print("[MAIN] Started everything at {}".format(start_time.strftime("%H:%M:%S")))
+
     ## Config object for a run of data
     ## See `Constants.py` for available options and default values
     config = Constants.Config(
         image_dir = os.path.expanduser("~/mnt/jgt/2020/0212"),
         image_prefix = "l141_5",
-        #bias_prefix = "bias",
-        #flat_prefix = "dflat6",
         n_sets = 8,
-        has_sets = True,
-        set_size = 50,
-        variability_threshold = 0.1,
     )
+
+    field_details = [
+            # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
+            ["~/mnt/jgt/2022/0105", "l136",         9,      "dflat",    "bias2"],
+            ["~/mnt/jgt/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
+            ["~/mnt/jgt/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
+            ]
+
+    for image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
+
+        config = Constants.Config(
+            image_dir = os.path.expanduser(image_dir),
+            image_prefix = image_prefix,
+            n_sets = n_sets,
+            flat_prefix = flat_prefix,
+            bias_prefix = bias_prefix,
+        )
+
+        run(config)
+
+    _ = Utilities.finished_job("everything", start_time)
+
+
+def run(config):
+
+    start_time = datetime.now()
+    print("[JOB] Started {} at {}".format(config.image_prefix, start_time.strftime("%H:%M:%S")))
     
     ## Reducer
     ## Takes raw images, subtracts bias and divides by flat field
@@ -108,7 +129,7 @@ def main():
     da.output_results()
     da.create_thumbnails(ff)
     
-    _ = Utilities.finished_job("everything", start_time)
+    _ = Utilities.finished_job("everything for {}".format(config.image_prefix), start_time)
 
 
 if __name__ == "__main__":

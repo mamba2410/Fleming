@@ -32,11 +32,6 @@ def main():
         image_dir = os.path.expanduser("~/mnt/jgt/2020/0212"),
         image_prefix = "l141_5",
         n_sets = 8,
-<<<<<<< HEAD
-=======
-        #variability_threshold = 0.3,
-        #min_signal_to_noise = 4,
->>>>>>> 54f3cf3 (flux: counts off edge are negative)
     )
     
     ## Reducer
