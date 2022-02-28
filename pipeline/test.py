@@ -11,11 +11,13 @@ import StreakFinder
 from datetime import datetime
 import os
 import shutil
+import numpy as np
 
 def setup():
     print("[Setup] Removing results and light curves")
     try:
         shutil.rmtree("./workspace/results/")
+        shutil.rmtree("./workspace/rejects/")
         shutil.rmtree("./workspace/adjusted_light_curves/")
     except:
         pass
@@ -78,7 +80,7 @@ def main():
 
     ## Find the flux of each star in each image then create a light curve
     ## Write the light curves to file
-    ff.make_light_curves()
+    #ff.make_light_curves()
 
     light_curve_time = Utilities.finished_job("making light curves", shift_finder_time)
 
@@ -111,6 +113,9 @@ def main():
     #ff.plot_all_light_curves(source_ids, adjusted=True)
     #ff.plot_adjusted_comparison(source_ids, show=False)
 
+    reject_ids = np.setxor1d(source_ids, variable_ids)
+    ff.plot_all_light_curves(reject_ids, plot_dir=config.rejects_dir, adjusted=True, show=False)
+
     print("[Main] Outputting results")
     da.output_results()
     da.plot_means_and_stds()
@@ -120,5 +125,5 @@ def main():
 
 
 if __name__ == "__main__":
-    setup()
+    #setup()
     main()

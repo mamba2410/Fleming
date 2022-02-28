@@ -238,7 +238,8 @@ class FluxFinder:
         
         
         
-    def plot_light_curve(self, source_id=None, curve_path=None, adjusted=False, show=False, close=True):
+    def plot_light_curve(self, source_id=None, curve_path=None, plot_dir=None,
+            adjusted=False, show=False, close=True):
         """
         Plot light curve of star with the given ID from catalogue
 
@@ -320,7 +321,10 @@ class FluxFinder:
         if show:
             plt.show()
 
-        image_file = os.path.join(self.config.output_dir, fname)
+        if plot_dir == None:
+            image_file = os.path.join(self.config.output_dir, fname)
+        else:
+            image_file = os.path.join(plot_dir, fname)
         plt.savefig(image_file)
 
         if close:
@@ -328,17 +332,20 @@ class FluxFinder:
 
 
         
-    def plot_all_light_curves(self, ids, adjusted=False, show=False):
+    def plot_all_light_curves(self, ids, plot_dir=None, adjusted=False, show=False):
         for _i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
             self.plot_light_curve(
-                    source_id=source_id, curve_path=path, adjusted=adjusted, show=show, close=True)
+                    source_id=source_id, curve_path=path, plot_dir=plot_dir,
+                    adjusted=adjusted, show=show, close=True)
 
-    def plot_adjusted_comparison(self, ids, show=False):
+    def plot_adjusted_comparison(self, ids, plot_dir=None, show=False):
         for _i, _path, source_id in Utilities.loop_variables(self.config, ids, adjusted=False):
             self.plot_light_curve(
-                    source_id=source_id, curve_path=None, adjusted=False, show=False, close=False)
+                    source_id=source_id, curve_path=None, plot_dir=plot_dir,
+                    adjusted=False, show=False, close=False)
             self.plot_light_curve(
-                    source_id=source_id, curve_path=None, adjusted=True, show=show, close=True)
+                    source_id=source_id, curve_path=None, plot_dir=plot_dir,
+                    adjusted=True, show=show, close=True)
 
     def plot_avg_light_curve(self, curve_path, adjusted=False, show=False):
         self.plot_light_curve(source_id=None, curve_path=curve_path, adjusted=adjusted, show=show)
