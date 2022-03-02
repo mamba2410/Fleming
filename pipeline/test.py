@@ -13,6 +13,7 @@ from datetime import datetime
 import os
 import shutil
 import numpy as np
+import matplotlib.pyplot as plt
 
 def setup():
     print("[Setup] Removing results and light curves")
@@ -202,7 +203,16 @@ def post_processing():
     search_ids = [1194]
 
     for _i, path, source_id in Utilities.loop_variables(config, search_ids, adjusted=True):
-        print(pf.period_search(source_id, path))
+        curve = np.genfromtxt(path, dtype=config.light_curve_dtype)
+        P, P_err, A, A_err, phi, B = pf.period_search(source_id, path)
+        main_sine = A * np.sin(2*np.pi/P * curve['time'] + phi) + B
+        P, P_err, A, A_err, phi, B = pf.period_search(source_id, path, period_min = 9000, period_max = 10000)
+        secondary_sine = A * np.sin(2*np.pi/P * curve['time'] + phi)
+
+        plt.scatter(curve['time'], curve['counts'])
+        plt.plot(curve['time'], main_sine + secondary_sine, color="red")
+        plt.savefig(config.output_dir + "/TEST4.jpg")
+        plt.close()
 
 
 if __name__ == "__main__":

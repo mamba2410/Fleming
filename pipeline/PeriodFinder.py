@@ -9,6 +9,7 @@ class PeriodFinder:
         self.config = config
 
 
+    ## Finds the global minimum
     def period_search(self, source_id, path,
             period_min = 1*3600, # 1 hour
             period_max = 5*3600, # 5 hours
@@ -41,13 +42,13 @@ class PeriodFinder:
         ## TODO: Put this in a loop until some tolerance?
 
         ## Approximate chi2 landscape as linear, for rough domain searches
-        approx_gradient = (chi2_next - chi2_min)/(omega_next - omega_min)
+        approx_gradient = np.sqrt(chi2_next - chi2_min)/(omega_next - omega_min)
 
         ## Estimation of step we should take to get \deltachi2 ~1
         approx_halfwidth = 1/approx_gradient
 
         ## How much should we scale this width to capture the whole minimum?
-        width_adjustment = 2
+        width_adjustment = 1.5
 
         omegas = np.linspace(
                 omega_min - width_adjustment*approx_halfwidth,
@@ -73,11 +74,31 @@ class PeriodFinder:
         plt.savefig(self.config.output_dir + "/TEST2.jpg")
         plt.close()
 
+        plt.scatter(time, counts)
+
+        B, C, S = _params[idx_min]
+        attempted_fit = B + C*np.cos(omega_min*time) + S*np.sin(omega_min*time)
+        plt.plot(time, attempted_fit, color="red")
+        plt.savefig(self.config.output_dir + "/TEST3.jpg")
+        plt.close()
+
 
         period_min = 2*np.pi/omega_min
         period_min_err = (omega_min_err/omega_min) * period_min
 
-        return period_min, period_min_err
+        params, _H, H_inv = self.periodogram_fit_func(counts, time, errors, omega_min)
+        B, C, S = params
+        C_err = H_inv[1,1]
+        S_err = H_inv[2,2]
+        A = np.sqrt(C**2 + S**2)
+
+        amplitude_err = np.sqrt( ((C/A)*C_err)**2 + ((S/A)*S_err)**2 )
+        amplitude = A
+
+        phi = np.arctan(C/S)
+
+
+        return period_min, period_min_err, amplitude, amplitude_err, phi, B
 
 
 
