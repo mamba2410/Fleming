@@ -181,7 +181,7 @@ class FluxFinder:
         times = [line.rstrip(self.config.line_ending) for line in open(self.config.time_path)]
         n_times = len(times)
 
-        dt_obs_start = datetime.strptime(times[0], "%Y-%m-%dT%H:%M:%S")
+        dt_obs_start = datetime.strptime(times[0], self.config.fits_date_format)
 
         ## Light curves
         ## Dim 0: each source
@@ -206,7 +206,7 @@ class FluxFinder:
 
                 ## TODO: Make time format a config param
                 ## Use datetime objects to calc time difference
-                dt_image = datetime.strptime(date_and_time, "%Y-%m-%dT%H:%M:%S")
+                dt_image = datetime.strptime(date_and_time, self.config.fits_date_format)
                 dt_elapsed = dt_image - dt_obs_start
                 seconds_elapsed = dt_elapsed.seconds
                 

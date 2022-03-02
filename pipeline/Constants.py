@@ -77,6 +77,7 @@ class Config:
             line_ending         = "\n",
             identifier          = "id",
             table_format        = "ascii",
+            fits_date_format    = "%Y-%m-%dT%H:%M:%S",
 
             variability_threshold   = 0.8,
             variability_max         = 5,
@@ -96,6 +97,7 @@ class Config:
             has_sets            = True,
             set_size            = 50,
             n_sets              = 7,
+            has_filter_in_header= True,
 
             astrometry_timeout  = 1200,
             api_key             = "",
@@ -152,6 +154,7 @@ class Config:
         self.line_ending        = line_ending
         self.identifier         = identifier
         self.table_format       = table_format
+        self.fits_date_format   = fits_date_format
 
         self.variability_threshold  = variability_threshold
         self.variability_max        = variability_max
@@ -171,6 +174,7 @@ class Config:
         self.has_sets           = has_sets
         self.set_size           = set_size
         self.n_sets             = n_sets
+        self.has_filter_in_header= has_filter_in_header
 
         self.astrometry_timeout = astrometry_timeout
         self.api_key_file       = api_key_file

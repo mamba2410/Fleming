@@ -31,15 +31,20 @@ def main():
     ## Config object for a run of data
     ## See `Constants.py` for available options and default values
     config = Constants.Config(
-        image_dir = os.path.expanduser("~/mnt/jgt/2020/0212"),
-        image_prefix = "l141_5",
-        n_sets = 1,
+        raw_image_dir = os.path.expanduser("~/mnt/uni/tmp_moving/0301"),
+        image_prefix = "l138_0",
+        n_sets = 9,
+        bias_prefix = "bias",
+        fits_extension = ".fits",
+        fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
+        has_filter_in_header = False,
     )
     
     ## Reducer
     ## Takes raw images, subtracts bias and divides by flat field
     r = Reducer.Reducer(config, "No filter")    ## Only "No filter" for Trius
-    r.reduce(skip_existing=False)    ## Skip images that have already been reduced
+    r.reduce(skip_existing=True)    ## Skip images that have already been reduced
+    #r.reduce(skip_existing=False)    ## Always create new images
 
     reducer_time = Utilities.finished_job("reducing images", start_time)
     
@@ -55,7 +60,7 @@ def main():
             .format(catalogue_set_number, catalogue_image_number))
 
     n_sources = c.generate_catalogue(catalogue_image_path, solve=False)
-    #c.generate_image_times()
+    c.generate_image_times()
 
     cataloguer_time = Utilities.finished_job("cataloguing stars", reducer_time)
     
@@ -67,9 +72,9 @@ def main():
      
     ## ShiftFinder
     ## Gets the shift of each star for each image in the series
-    #sf = ShiftFinder.ShiftFinder(config, n_sources)
-    #sf.generate_shifts()
-    #reference_ids = sf.get_reference_ids()
+    sf = ShiftFinder.ShiftFinder(config, n_sources)
+    sf.generate_shifts()
+    reference_ids = sf.get_reference_ids()
      
     shift_finder_time = Utilities.finished_job("finding shifts", cataloguer_time)
      
@@ -79,7 +84,7 @@ def main():
 
     ## Find the flux of each star in each image then create a light curve
     ## Write the light curves to file
-    #ff.make_light_curves()
+    ff.make_light_curves()
 
     light_curve_time = Utilities.finished_job("making light curves", shift_finder_time)
 
@@ -134,6 +139,8 @@ def rename():
     ## s: set number, 1..n_sets
     ## iii: image_number, 001..050 
 
+    print("[TEST] Starting rename")
+
     ## l141 first set
     base_path = os.path.expanduser("~/mnt/jgt/2020/0206Trius")
     for i in range(1, 51):
@@ -160,9 +167,24 @@ def rename():
                     os.path.join(base_path, "l140_0_{:1d}_{:03d}.fit".format(s, i))
             )
 
+    ## Make l138_0 image numbers range from 1-50
+    base_path = os.path.expanduser("~/mnt/uni/tmp_moving/0301")
+    for i in range(40, 40+50):
+        os.rename(
+                os.path.join(base_path, "l138_0_1_{:03d}.fits".format(i)),
+                os.path.join(base_path, "l138_0_1_{:03d}.fits".format(i-39)),
+        )
+
+    for i in range(51, 51+50):
+        os.rename(
+                os.path.join(base_path, "l138_0_3_{:03d}.fits".format(i)),
+                os.path.join(base_path, "l138_0_3_{:03d}.fits".format(i-50)),
+        )
+
+    print("[TEST] Finished renaming")
 
 
 if __name__ == "__main__":
-    setup()
-    main()
     #rename()
+    #setup()
+    main()

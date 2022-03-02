@@ -53,7 +53,7 @@ class Reducer:
         """
 
         for file in os.listdir(self.config.raw_image_dir):
-            
+
             if file[:len(self.config.bias_prefix)] == self.config.bias_prefix:
                 self.bias_frames.append(getdata(
                     os.path.join(self.config.raw_image_dir, file)))
@@ -142,11 +142,16 @@ class Reducer:
                 print("[Reducer] Creating reduced image '{}'".format(reduced_path))
 
             path = os.path.join(self.config.raw_image_dir, file)
+
             #get image filter value
-            image_filter=getval(path, 'FILTER',ignore_missing_end=True)
+            if self.config.has_filter_in_header:
+                image_filter = getval(path, 'FILTER',ignore_missing_end=True)
+                valid_filter = image_filter[:1]==self.image_filter or image_filter == self.image_filter
+            else:
+                valid_filter = True
 
             #if the filter of the image matches the required filter then
-            if image_filter[:1]==self.image_filter or image_filter == self.image_filter:
+            if valid_filter:
                 #get image data and header
                 data = getdata(path, ignore_missing_end=True) 
                 
