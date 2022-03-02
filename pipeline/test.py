@@ -38,12 +38,13 @@ def main():
         fits_extension = ".fits",
         fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
         has_filter_in_header = False,
+        variability_threshold = 0.5,
     )
     
     ## Reducer
     ## Takes raw images, subtracts bias and divides by flat field
     r = Reducer.Reducer(config, "No filter")    ## Only "No filter" for Trius
-    r.reduce(skip_existing=True)    ## Skip images that have already been reduced
+    #r.reduce(skip_existing=True)    ## Skip images that have already been reduced
     #r.reduce(skip_existing=False)    ## Always create new images
 
     reducer_time = Utilities.finished_job("reducing images", start_time)
@@ -60,7 +61,7 @@ def main():
             .format(catalogue_set_number, catalogue_image_number))
 
     n_sources = c.generate_catalogue(catalogue_image_path, solve=False)
-    c.generate_image_times()
+    #c.generate_image_times()
 
     cataloguer_time = Utilities.finished_job("cataloguing stars", reducer_time)
     
@@ -73,8 +74,8 @@ def main():
     ## ShiftFinder
     ## Gets the shift of each star for each image in the series
     sf = ShiftFinder.ShiftFinder(config, n_sources)
-    sf.generate_shifts()
-    reference_ids = sf.get_reference_ids()
+    #sf.generate_shifts()
+    #reference_ids = sf.get_reference_ids()
      
     shift_finder_time = Utilities.finished_job("finding shifts", cataloguer_time)
      
@@ -84,7 +85,7 @@ def main():
 
     ## Find the flux of each star in each image then create a light curve
     ## Write the light curves to file
-    ff.make_light_curves()
+    #ff.make_light_curves()
 
     light_curve_time = Utilities.finished_job("making light curves", shift_finder_time)
 
@@ -186,5 +187,5 @@ def rename():
 
 if __name__ == "__main__":
     #rename()
-    #setup()
+    setup()
     main()

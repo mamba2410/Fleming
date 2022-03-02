@@ -51,6 +51,22 @@ def main():
     _ = Utilities.finished_job("everything", start_time)
 
 
+def main_single():
+
+    config = Constants.Config(
+        raw_image_dir = os.path.expanduser("~/mnt/uni/tmp_moving/0301"),
+        image_prefix = "l138_0",
+        n_sets = 9,
+        bias_prefix = "bias",
+        fits_extension = ".fits",
+        fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
+        has_filter_in_header = False,
+        variability_threshold = 0.5,
+    )
+
+    run(config)
+
+
 def run(config):
 
     start_time = datetime.now()
@@ -135,4 +151,5 @@ def run(config):
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    main_single()
