@@ -11,12 +11,46 @@ class PeriodFinder:
         self.config = config
 
 
-    ## Finds the global minimum
     def period_search(self, source_id, path,
             period_min = 0.5*3600,  # 0.5 hours
             period_max = 6.0*3600,  # 6 hours
             n_samples  = int(2e3),  # 2000 samples
             ):
+        """
+        Wrapper function for `period_search_curve`.
+        Use if you are using an unmodified light curve.
+
+        Parameters
+        ----------
+
+        source_id: int
+            ID of the source to be analysed.
+
+        path: string
+            File path of the light curve to read.
+
+        period_min, period_max: float
+            Minimum and maximum period range to search in.
+
+        n_samples: int
+            Number of periods to check between the bounds.
+
+        Returns
+        -------
+
+        period_min, period_min_err: float
+            Most prominent period present, as well as its error.
+
+        amplitude, amplitude_err: float
+            Amplitude of most prominent period and its error.
+
+        phi: float
+            Phase offset
+
+        offset: float
+            Height offset
+
+        """
 
         curve = np.genfromtxt(path, dtype = self.config.light_curve_dtype).transpose()
         time = curve['time']
@@ -27,71 +61,134 @@ class PeriodFinder:
                 period_min, period_max, n_samples)
 
 
+
     def period_search_curve(self, source_id,
             time, counts, errors,
             period_min = 0.5*3600,
             period_max = 6.0*3600,
             n_samples  = int(2e3)
             ):
+        """
+        Takes a source light curve and finds the most prominent period
+        in the curve.
+
+        Default period search range is half an hour to 6 hours at a sample
+        rate of 2000 periods in between.
+
+        Uses a model of 
+        B + C cos(omega t) + S sin(omega t)
+        which is equivalent to
+        B + A sin(2 pi/P t + phi)
+
+        "Most prominent period" means period which minimises chi squared.
+
+        Parameters
+        ----------
+
+        source_id: int
+            ID of the source to be analysed.
+
+        time: numpy array
+            Times of each data point
+
+        counts: numpy array
+            Our data point. Relative flux of star at that time.
+
+        errors: numpy array
+            The uncertainty in the `counts` measurement.
+
+        period_min, period_max: float
+            Minimum and maximum period range to search in.
+
+        n_samples: int
+            Number of periods to check between the bounds.
+
+
+        Returns
+        -------
+
+        period_min, period_min_err: float
+            Most prominent period present, as well as its error.
+
+        amplitude, amplitude_err: float
+            Amplitude of most prominent period and its error.
+
+        phi: float
+            Phase offset
+
+        offset: float
+            Height offset
+
+        """
         
         
+        ## Convert periods to angular frequencies
         periods = np.linspace(period_min, period_max, int(n_samples))
         omegas = 2*np.pi/periods
 
 
-        ## Initial search
-
+        ## Initial search, get chi squared landscape
         _params, chi2 = self.search_omegas(counts, time, errors, omegas)
         idx_min = np.argmin(chi2)
         omega_min = omegas[idx_min]
         chi2_min  = chi2[idx_min]
 
+        ## What's our changes like near the minimum?
         omega_next = omegas[idx_min+1]
         chi2_next  = chi2[idx_min+1]
 
+        ## Save original landscape to plot later
         chi2_orig = chi2
         omegas_orig = omegas
 
 
 
-        ## TODO: Put this in a loop until some tolerance?
+        ## Iterate until we can resolve the minimum of the landscape well
+        ## we're aiming for a total change of chi from min to max ~1
+        ## Set a max number of iterations just to be safe.
         iteration = 1
         while (np.max(chi2) - chi2_min) > self.config.period_chi2_range \
               and iteration < self.config.period_max_iterations:
 
-            print("[PeriodFinder] Iteration: {:02}".format(iteration))
+            print("[PeriodFinder] Iteration: {:02} for id {:04}".format(iteration, source_id))
 
-            ## Approximate chi2 landscape as linear, for rough domain searches
+            ## Find an approximate gradient to guestimate width of next omega range
             approx_gradient = np.sqrt(chi2_next - chi2_min)/(omega_next - omega_min)
 
-            ## Estimation of step we should take to get \deltachi2 ~1
+            ## Estimation of width we should use to better resolve the minimum
             approx_halfwidth = 1/approx_gradient
 
+            ## Create new omega range
             omegas = np.linspace(
                     omega_min - self.config.period_width_adjustment*approx_halfwidth,
                     omega_min + self.config.period_width_adjustment*approx_halfwidth,
                     int(n_samples)
                 )
 
-            ## Second approximation, much closer to the minimum
+            ## Next approximation, (hopefully) much closer to the minimum
             ## Need to get close enough to be able to approximate to a parabola
             _params, chi2 = self.search_omegas(counts, time, errors, omegas)
             idx_min = np.argmin(chi2)
+
             omega_min = omegas[idx_min]
             chi2_min  = chi2[idx_min]
 
+            omega_next = omegas[idx_min+1]
+            chi2_next  = chi2[idx_min+1]
+
             iteration += 1
 
+
         ## Assume we are good enough
-        ## TODO: End of loop
 
         idx_dchi2 = np.where(chi2[idx_min:] > chi2_min + 1)[0][0]
         idx_dchi2 += idx_min
         
+        ## Uncertainty of omega is 1/sqrt(curvature at minimum)
         c = (chi2[idx_dchi2] - chi2_min)/(omegas[idx_dchi2] - omega_min)**2
         omega_min_err = np.sqrt(1/c)
 
-
+        ## Convert from angular frequency to period
         period_min = 2*np.pi/omega_min
         period_min_err = (omega_min_err/omega_min) * period_min
 
@@ -99,28 +196,32 @@ class PeriodFinder:
         B, C, S = _params[idx_min]
         attempted_fit = B + C*np.cos(omega_min*time) + S*np.sin(omega_min*time)
 
-        plt.scatter(time, counts)
+        ## Plot light curve and overplot sine wave
+        plt.scatter(time, counts, marker="x")
         plt.plot(time, attempted_fit, color="red")
-        fname = "compare_{}_{}{:04}_P{:6g}{}".format(
+        fname = "compare_{}_{}{:04}_P{:05f}{}".format(
                 self.config.image_prefix,
                 self.config.identifier,
                 source_id,
                 period_min,
                 self.config.plot_file_extension
             )
-        plt.title("Comparison of found period and light curve for id{:04}".format(source_id))
+        plt.title("Overplot period of {:5f}s for source id{:04}".format(period_min, source_id))
         plt.xlabel("Time [s]")
         plt.ylabel("Normalised brightness [arb. u.]")
         plt.savefig(os.path.join(self.config.periods_dir, fname))
         plt.close()
 
 
+        ## Amplitude estimation and error
+        ## Use inverse Hessian to get errors
         params, _H, H_inv = self.periodogram_fit_func(counts, time, errors, omega_min)
         B, C, S = params
         C_err = H_inv[1,1]
         S_err = H_inv[2,2]
         A = np.sqrt(C**2 + S**2)
 
+        ## Amplitude and its error
         amplitude_err = np.sqrt( ((C/A)*C_err)**2 + ((S/A)*S_err)**2 )
         amplitude = A
 
@@ -129,14 +230,14 @@ class PeriodFinder:
 
         ## Plot initial chi2 distribution
         plt.plot(2*np.pi/omegas_orig, chi2_orig)
-        fname = "chi2_{}_{}{:04}_P{:6g}{}".format(
+        fname = "chi2_{}_{}{:04}_P{:5f}{}".format(
                 self.config.image_prefix,
                 self.config.identifier,
                 source_id,
                 period_min,
                 self.config.plot_file_extension
             )
-        plt.title("$\chi^2$ plot for source {:04}".format(source_id))
+        plt.title("$\chi^2$ plot for source {:04}, period {:5f}s".format(source_id))
         plt.xlabel("Period [s]")
         plt.ylabel("$\chi^2$ [arb. u.]")
         plt.savefig(os.path.join(self.config.periods_dir, fname))
@@ -148,6 +249,35 @@ class PeriodFinder:
 
 
     def search_omegas(self, counts, time, errors, omegas):
+        """
+        Loop over range of angular frequencies and get chi squared
+        landscape and best fit parameters for each.
+
+        Parameters
+        ----------
+
+        counts: numpy array
+            Relative flux of source at each point in time
+
+        time: numpy array
+            Time elapsed since initial measurement
+
+        errors: numpy array
+            Uncertainty on the relative flux
+
+        omegas: numpy array
+            Range of angular frequencies to search
+
+        Returns
+        -------
+
+        params: numpy array
+            Array of the B, C and S parameters for each fit
+
+        chi2: numpy array
+            Chi squared value for each angular frequency
+
+        """
         n_samples = len(omegas)
         chi2 = np.zeros(n_samples)
         params = np.zeros((n_samples, 3))
@@ -162,6 +292,43 @@ class PeriodFinder:
 
 
     def periodogram_fit_func(self, data, time, error, omega):
+        """
+        Calculates the best fit parameters for a single 
+        angular frequency for a given light curve.
+
+        Uses the Hessian to immediately find minimum chi squared.
+
+        Concept from AS5001 ADA.
+
+        Parameters
+        ----------
+
+        data: numpy array
+            Relative flux of source at each point in time
+
+        time: numpy array
+            Time elapsed since initial measurement
+
+        error: numpy array
+            Uncertainty on the relative flux
+
+        omega: float64
+            Angular frequency of fit.
+
+        Returns
+        -------
+
+        fit_params: tuple
+            Tuple of the B, C and S parameters
+
+        H: numpy matrix
+            Hessian matrix for fit
+
+        H_inv: numpy matrix
+            Inverse Hessian matrix for fit
+
+        """
+
         s2r = 1/error**2
         s = np.sin(omega*time)
         c = np.cos(omega*time)
@@ -184,6 +351,9 @@ class PeriodFinder:
 
 
     def periodogram_chi2(self, data, time, error, omega, B, C, S):
+        """
+        Calculates the chi squared value for a set of fit parameters
+        """
         F = lambda t: B + C*np.cos(omega*t) + S*np.sin(omega*t)
         chi2 = ((data-F(time))/error)**2
         chi2 = np.sum(chi2)
@@ -191,6 +361,9 @@ class PeriodFinder:
     
     
     def periodogram_chi2_(self, data, time, error, omega, params):
+        """
+        Wrapper function for `periodogram_chi2`
+        """
         return self.periodogram_chi2(data, time, error, omega, params[0], params[1], params[2])
 
 
