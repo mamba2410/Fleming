@@ -5,6 +5,7 @@ import Cataloguer
 import ShiftFinder
 import FluxFinder
 import DataAnalyser
+import PeriodFinder
 import MovingObjectFinder
 import StreakFinder
 
@@ -185,7 +186,27 @@ def rename():
     print("[TEST] Finished renaming")
 
 
+def post_processing():
+    config = Constants.Config(
+        raw_image_dir = os.path.expanduser("~/mnt/uni/tmp_moving/0301"),
+        image_prefix = "l138_0",
+        n_sets = 9,
+        bias_prefix = "bias",
+        fits_extension = ".fits",
+        fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
+        has_filter_in_header = False,
+    )
+
+    pf = PeriodFinder.PeriodFinder(config)
+
+    search_ids = [1194]
+
+    for _i, path, source_id in Utilities.loop_variables(config, search_ids, adjusted=True):
+        print(pf.period_search(source_id, path))
+
+
 if __name__ == "__main__":
     #rename()
-    setup()
-    main()
+    #setup()
+    #main()
+    post_processing()
