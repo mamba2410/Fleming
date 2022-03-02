@@ -206,8 +206,13 @@ def post_processing():
         curve = np.genfromtxt(path, dtype=config.light_curve_dtype)
         P, P_err, A, A_err, phi, B = pf.period_search(source_id, path)
         main_sine = A * np.sin(2*np.pi/P * curve['time'] + phi) + B
+        print("[POST] Period {:.6f} +/- {:.6f} hours".format(P/3600, P_err/3600))
+        print("[POST] Amplitude {:.6f} +/- {:.6f}".format(A*100, A_err*100))
+
         P, P_err, A, A_err, phi, B = pf.period_search(source_id, path, period_min = 9000, period_max = 10000)
         secondary_sine = A * np.sin(2*np.pi/P * curve['time'] + phi)
+        print("[POST] Period {:.6f} +/- {:.6f} hours".format(P/3600, P_err/3600))
+        print("[POST] Amplitude {:.6f} +/- {:.6f}".format(A*100, A_err*100))
 
         plt.scatter(curve['time'], curve['counts'])
         plt.plot(curve['time'], main_sine + secondary_sine, color="red")

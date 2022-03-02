@@ -15,7 +15,7 @@ class PeriodFinder:
     def period_search(self, source_id, path,
             period_min = 1*3600, # 1 hour
             period_max = 5*3600, # 5 hours
-            n_samples  = 1e4,    # 10_000 samples
+            n_samples  = 2e3,    # 1000 samples
             adjusted=True):
         
         curve = np.genfromtxt(path, dtype = self.config.light_curve_dtype).transpose()
@@ -43,28 +43,47 @@ class PeriodFinder:
 
 
         ## TODO: Put this in a loop until some tolerance?
+        iteration = 1
+        max_iterations = 20
+        while (np.max(chi2) - chi2_min) > 3 and iteration < max_iterations:
+            print("[PeriodFinder] Iteration: {:02}".format(iteration))
 
-        ## Approximate chi2 landscape as linear, for rough domain searches
-        approx_gradient = np.sqrt(chi2_next - chi2_min)/(omega_next - omega_min)
+            ## Approximate chi2 landscape as linear, for rough domain searches
+            approx_gradient = np.sqrt(chi2_next - chi2_min)/(omega_next - omega_min)
 
-        ## Estimation of step we should take to get \deltachi2 ~1
-        approx_halfwidth = 1/approx_gradient
+            ## Estimation of step we should take to get \deltachi2 ~1
+            approx_halfwidth = 1/approx_gradient
 
-        ## How much should we scale this width to capture the whole minimum?
-        width_adjustment = 1.5
+            ## How much should we scale this width to capture the whole minimum?
+            width_adjustment = 1.5
 
-        omegas = np.linspace(
-                omega_min - width_adjustment*approx_halfwidth,
-                omega_min + width_adjustment*approx_halfwidth,
-                int(n_samples)
+
+            omegas = np.linspace(
+                    omega_min - width_adjustment*approx_halfwidth,
+                    omega_min + width_adjustment*approx_halfwidth,
+                    int(n_samples)
+                )
+
+            ## Second approximation, much closer to the minimum
+            ## Need to get close enough to be able to approximate to a parabola
+            _params, chi2 = self.search_omegas(counts, time, errors, omegas)
+            idx_min = np.argmin(chi2)
+            omega_min = omegas[idx_min]
+            chi2_min  = chi2[idx_min]
+
+            plt.plot(2*np.pi/omegas, chi2)
+            fname = "chi2_i{:02}_{}_{}{:04}{}".format(
+                iteration,
+                self.config.image_prefix,
+                self.config.identifier,
+                source_id,
+                self.config.plot_file_extension
             )
+            plt.title("Iteration {:02}".format(iteration))
+            plt.savefig(os.path.join(self.config.periods_dir, fname))
+            plt.close()
 
-        ## Second approximation, much closer to the minimum
-        ## Need to get close enough to be able to approximate to a parabola
-        _params, chi2 = self.search_omegas(counts, time, errors, omegas)
-        idx_min = np.argmin(chi2)
-        omega_min = omegas[idx_min]
-        chi2_min  = chi2[idx_min]
+            iteration += 1
 
         ## Assume we are good enough
         ## TODO: End of loop
