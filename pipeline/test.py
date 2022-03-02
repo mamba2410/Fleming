@@ -211,7 +211,7 @@ def post_processing():
 
         plt.scatter(curve['time'], curve['counts'])
         plt.plot(curve['time'], main_sine + secondary_sine, color="red")
-        plt.savefig(config.output_dir + "/TEST4.jpg")
+        plt.savefig(os.path.join(config.periods_dir, "TEST4.jpg"))
         plt.close()
 
 

@@ -1,5 +1,7 @@
 import Utilities
+
 import numpy as np
+import os
 
 import matplotlib.pyplot as plt
 
@@ -32,12 +34,13 @@ class PeriodFinder:
         omega_min = omegas[idx_min]
         chi2_min  = chi2[idx_min]
 
-        plt.plot(2*np.pi/omegas, chi2)
-        plt.savefig(self.config.output_dir + "/TEST1.jpg")
-        plt.close()
-
         omega_next = omegas[idx_min+1]
         chi2_next  = chi2[idx_min+1]
+
+        chi2_orig = chi2
+        omegas_orig = omegas
+
+
 
         ## TODO: Put this in a loop until some tolerance?
 
@@ -57,12 +60,14 @@ class PeriodFinder:
             )
 
         ## Second approximation, much closer to the minimum
+        ## Need to get close enough to be able to approximate to a parabola
         _params, chi2 = self.search_omegas(counts, time, errors, omegas)
         idx_min = np.argmin(chi2)
         omega_min = omegas[idx_min]
         chi2_min  = chi2[idx_min]
 
         ## Assume we are good enough
+        ## TODO: End of loop
 
         idx_dchi2 = np.where(chi2[idx_min:] > chi2_min + 1)[0][0]
         idx_dchi2 += idx_min
@@ -70,21 +75,29 @@ class PeriodFinder:
         c = (chi2[idx_dchi2] - chi2_min)/(omegas[idx_dchi2] - omega_min)**2
         omega_min_err = np.sqrt(1/c)
 
-        plt.plot(2*np.pi/omegas, chi2)
-        plt.savefig(self.config.output_dir + "/TEST2.jpg")
-        plt.close()
-
-        plt.scatter(time, counts)
-
-        B, C, S = _params[idx_min]
-        attempted_fit = B + C*np.cos(omega_min*time) + S*np.sin(omega_min*time)
-        plt.plot(time, attempted_fit, color="red")
-        plt.savefig(self.config.output_dir + "/TEST3.jpg")
-        plt.close()
-
 
         period_min = 2*np.pi/omega_min
         period_min_err = (omega_min_err/omega_min) * period_min
+
+        ## Sine curve of found period
+        B, C, S = _params[idx_min]
+        attempted_fit = B + C*np.cos(omega_min*time) + S*np.sin(omega_min*time)
+
+        plt.scatter(time, counts)
+        plt.plot(time, attempted_fit, color="red")
+        fname = "compare_{}_{}{:04}_P{:6g}{}".format(
+                self.config.image_prefix,
+                self.config.identifier,
+                source_id,
+                period_min,
+                self.config.plot_file_extension
+            )
+        plt.title("Comparison of found period and light curve for id{:04}".format(source_id))
+        plt.xlabel("Time [s]")
+        plt.ylabel("Normalised brightness [arb. u.]")
+        plt.savefig(os.path.join(self.config.periods_dir, fname))
+        plt.close()
+
 
         params, _H, H_inv = self.periodogram_fit_func(counts, time, errors, omega_min)
         B, C, S = params
@@ -95,7 +108,24 @@ class PeriodFinder:
         amplitude_err = np.sqrt( ((C/A)*C_err)**2 + ((S/A)*S_err)**2 )
         amplitude = A
 
+        ## TODO: Which way round?
         phi = np.arctan(C/S)
+        #phi = np.arctan(S/C)
+
+        ## Plot initial chi2 distribution
+        plt.plot(2*np.pi/omegas_orig, chi2_orig)
+        fname = "chi2_{}_{}{:04}_P{:6g}{}".format(
+                self.config.image_prefix,
+                self.config.identifier,
+                source_id,
+                period_min,
+                self.config.plot_file_extension
+            )
+        plt.title("$\chi^2$ plot for source {:04}".format(source_id))
+        plt.xlabel("Period [s]")
+        plt.ylabel("$\chi^2$ [arb. u.]")
+        plt.savefig(os.path.join(self.config.periods_dir, fname))
+        plt.close()
 
 
         return period_min, period_min_err, amplitude, amplitude_err, phi, B

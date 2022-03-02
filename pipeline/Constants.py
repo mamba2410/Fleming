@@ -56,6 +56,7 @@ class Config:
             streak_subdir       = "streaks",
             moving_obj_subdir   = "moving_objects",
             rejects_subdir      = "rejects",
+            periods_subdir      = "periods",
 
             id_map_fname        = "id_mapper",
             moving_obj_fname    = "moving_obj",
@@ -127,6 +128,7 @@ class Config:
         self.streak_dir             = os.path.join(self.workspace_dir, streak_subdir)
         self.moving_obj_dir         = os.path.join(self.workspace_dir, moving_obj_subdir)
         self.rejects_dir            = os.path.join(self.workspace_dir, rejects_subdir)
+        self.periods_dir            = os.path.join(self.workspace_dir, periods_subdir)
 
         fname = "{}{}{}".format(time_prefix, image_prefix, standard_file_extension)
         self.time_path              = os.path.join(self.workspace_dir, fname)
@@ -247,5 +249,8 @@ class Config:
 
         if not os.path.exists(self.rejects_dir):
             os.mkdir(self.rejects_dir)
+
+        if not os.path.exists(self.periods_dir):
+            os.mkdir(self.periods_dir)
 
 
