@@ -13,15 +13,27 @@ class PeriodFinder:
 
     ## Finds the global minimum
     def period_search(self, source_id, path,
-            period_min = 1*3600, # 1 hour
-            period_max = 5*3600, # 5 hours
-            n_samples  = 2e3,    # 1000 samples
-            adjusted=True):
-        
+            period_min = 0.5*3600,  # 0.5 hours
+            period_max = 6.0*3600,  # 6 hours
+            n_samples  = int(2e3),  # 2000 samples
+            ):
+
         curve = np.genfromtxt(path, dtype = self.config.light_curve_dtype).transpose()
         time = curve['time']
         counts = curve['counts']
         errors = curve['counts_err']
+
+        return self.period_search_curve(source_id, time, counts, errors,
+                period_min, period_max, n_samples)
+
+
+    def period_search_curve(self, source_id,
+            time, counts, errors,
+            period_min = 0.5*3600,
+            period_max = 6.0*3600,
+            n_samples  = int(2e3)
+            ):
+        
         
         periods = np.linspace(period_min, period_max, int(n_samples))
         omegas = 2*np.pi/periods
@@ -67,18 +79,6 @@ class PeriodFinder:
             idx_min = np.argmin(chi2)
             omega_min = omegas[idx_min]
             chi2_min  = chi2[idx_min]
-
-            plt.plot(2*np.pi/omegas, chi2)
-            fname = "chi2_i{:02}_{}_{}{:04}{}".format(
-                iteration,
-                self.config.image_prefix,
-                self.config.identifier,
-                source_id,
-                self.config.plot_file_extension
-            )
-            plt.title("Iteration {:02}".format(iteration))
-            plt.savefig(os.path.join(self.config.periods_dir, fname))
-            plt.close()
 
             iteration += 1
 
