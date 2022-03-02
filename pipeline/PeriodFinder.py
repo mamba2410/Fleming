@@ -44,8 +44,9 @@ class PeriodFinder:
 
         ## TODO: Put this in a loop until some tolerance?
         iteration = 1
-        max_iterations = 20
-        while (np.max(chi2) - chi2_min) > 3 and iteration < max_iterations:
+        while (np.max(chi2) - chi2_min) > self.config.period_chi2_range \
+              and iteration < self.config.period_max_iterations:
+
             print("[PeriodFinder] Iteration: {:02}".format(iteration))
 
             ## Approximate chi2 landscape as linear, for rough domain searches
@@ -54,13 +55,9 @@ class PeriodFinder:
             ## Estimation of step we should take to get \deltachi2 ~1
             approx_halfwidth = 1/approx_gradient
 
-            ## How much should we scale this width to capture the whole minimum?
-            width_adjustment = 1.5
-
-
             omegas = np.linspace(
-                    omega_min - width_adjustment*approx_halfwidth,
-                    omega_min + width_adjustment*approx_halfwidth,
+                    omega_min - self.config.period_width_adjustment*approx_halfwidth,
+                    omega_min + self.config.period_width_adjustment*approx_halfwidth,
                     int(n_samples)
                 )
 
@@ -127,9 +124,8 @@ class PeriodFinder:
         amplitude_err = np.sqrt( ((C/A)*C_err)**2 + ((S/A)*S_err)**2 )
         amplitude = A
 
-        ## TODO: Which way round?
-        phi = np.arctan(C/S)
-        #phi = np.arctan(S/C)
+        ## Phase shift for a sin wave
+        phi = np.pi/2-np.arctan(S/C)
 
         ## Plot initial chi2 distribution
         plt.plot(2*np.pi/omegas_orig, chi2_orig)

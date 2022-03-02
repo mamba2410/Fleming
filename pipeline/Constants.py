@@ -92,6 +92,10 @@ class Config:
             n_reference_stars       = 10,
             min_signal_to_noise     = 2,
 
+            period_chi2_range       = 3,
+            period_max_iterations   = 10,
+            period_width_adjustment = 1.5,
+
             image_width         = 2432,
             image_height        = 1616,
             image_prefix        = "l137_0",
@@ -169,6 +173,10 @@ class Config:
         self.moving_obj_check_image = moving_obj_check_image
         self.n_reference_stars      = n_reference_stars
         self.min_signal_to_noise    = min_signal_to_noise
+
+        self.period_chi2_range       = period_chi2_range
+        self.period_max_iterations   = period_max_iterations  
+        self.period_width_adjustment = period_width_adjustment
 
         self.image_width        = image_width
         self.image_height       = image_height

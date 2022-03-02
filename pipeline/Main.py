@@ -28,13 +28,13 @@ def main():
             #["~/mnt/jgt/2022/0124", "l137_5",       7,      "dflat",    "bias"],
             #["~/mnt/jgt/2022/0301", "l138_0",       9,      "noflat",   "bias_end"],
             #["~/mnt/windows/Users/callu/tmp/0301", "l138_0", 9, "noflat", "bias_end", ".fits"],
-            #["~/mnt/jgt/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
+            ["~/mnt/jgt/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
             #["~/mnt/jgt/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
             #["~/mnt/jgt/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
-            #["~/mnt/jgt/2020/0212", "l141_5",       8,      "flat",     "bias2"],
+            ["~/mnt/jgt/2020/0212", "l141_5",       8,      "flat",     "bias2"],
             ]
 
-    for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix, fe in field_details:
+    for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
 
         config = Constants.Config(
             raw_image_dir = os.path.expanduser(raw_image_dir),
@@ -43,7 +43,6 @@ def main():
             n_sets = n_sets,
             flat_prefix = flat_prefix,
             bias_prefix = bias_prefix,
-            fits_extension = fe,
         )
 
         run(config)
@@ -151,5 +150,5 @@ def run(config):
 
 
 if __name__ == "__main__":
-    #main()
-    main_single()
+    main()
+    #main_single()
