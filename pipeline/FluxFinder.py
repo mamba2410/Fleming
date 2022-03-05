@@ -248,7 +248,7 @@ class FluxFinder:
         
         
     def plot_light_curve(self, source_id=None, curve_path=None, plot_dir=None,
-            adjusted=False, show=False, close=True):
+            adjusted=False, show=False, close=True, show_errors=True):
         """
         Plot light curve of star with the given ID from catalogue
 
@@ -302,9 +302,13 @@ class FluxFinder:
         maximum = max(normalised_fluxes)
     
         ## TODO: Multiple axes, seconds and minutes?
-        #plt.figure(figsize = (12, 8))
-        #plt.scatter(times, normalised_fluxes, s=5, marker='x');
-        plt.errorbar(times, normalised_fluxes, yerr=normalised_err, fmt='.')
+        if show_errors:
+            plt.errorbar(times, normalised_fluxes, yerr=normalised_err,
+                    fmt='.', elinewidth=0.7, ecolor="gray", capsize=3)
+        else:
+            plt.scatter(times, normalised_fluxes,
+                    marker='.')
+
         plt.xlabel("Time [seconds]")
         plt.ylabel("Relative flux [counts/mean]")
 
@@ -341,23 +345,24 @@ class FluxFinder:
 
 
         
-    def plot_all_light_curves(self, ids, plot_dir=None, adjusted=False, show=False):
+    def plot_given_light_curves(self, ids, plot_dir=None, adjusted=False, show=False, show_errors=False):
         for _i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
             self.plot_light_curve(
                     source_id=source_id, curve_path=path, plot_dir=plot_dir,
-                    adjusted=adjusted, show=show, close=True)
+                    adjusted=adjusted, show=show, close=True, show_errors=show_errors)
 
-    def plot_adjusted_comparison(self, ids, plot_dir=None, show=False):
+    def plot_adjusted_comparison(self, ids, plot_dir=None, show=False, show_errors=False):
         for _i, _path, source_id in Utilities.loop_variables(self.config, ids, adjusted=False):
             self.plot_light_curve(
                     source_id=source_id, curve_path=None, plot_dir=plot_dir,
-                    adjusted=False, show=False, close=False)
+                    adjusted=False, show=False, close=False, show_errors=show_errors)
             self.plot_light_curve(
                     source_id=source_id, curve_path=None, plot_dir=plot_dir,
-                    adjusted=True, show=show, close=True)
+                    adjusted=True, show=show, close=True, show_errors=show_errors)
 
-    def plot_avg_light_curve(self, curve_path, adjusted=False, show=False):
-        self.plot_light_curve(source_id=None, curve_path=curve_path, adjusted=adjusted, show=show)
+    def plot_avg_light_curve(self, curve_path, adjusted=False, show=False, show_errors=False):
+        self.plot_light_curve(source_id=None, curve_path=curve_path,
+                adjusted=adjusted, show=show, show_errors=show_errors)
 
 
     
