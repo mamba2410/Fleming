@@ -1,13 +1,14 @@
 from astropy.table import Table
-import Constants
-import os 
-import Utilities
-import matplotlib.pyplot as plt
-import FluxFinder
-import numpy as np
 from PIL import Image
-from astropy.visualization import (ZScaleInterval, LinearStretch,
-                                   ImageNormalize)
+from astropy.visualization import (ZScaleInterval, LinearStretch, ImageNormalize)
+
+import os 
+import numpy as np
+import matplotlib.pyplot as plt
+
+import pipeline.FluxFinder
+import pipeline.Constants
+import pipeline.Utilities
 
 class DataAnalyser:
     

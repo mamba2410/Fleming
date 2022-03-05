@@ -1,20 +1,19 @@
-import Constants
-import Utilities
 from astropy.io.fits import HDUList
 from astropy.io.fits import PrimaryHDU
 from astropy.io.fits import getheader
 from astropy.table import Table
+
+import os
+import matplotlib.pyplot as plt
+import numpy as np
 import datetime
 import random
 import math
-import os
-import Cataloguer
-import FluxFinder
-import matplotlib.pyplot as plt
 
-
-
-import numpy as np
+import pipeline.Constants
+import pipeline.Utilities
+import pipeline.Cataloguer
+import pipeline.FluxFinder
 
 class StreakFinder:
     

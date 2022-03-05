@@ -1,12 +1,12 @@
-import Utilities
-import Constants
-import Reducer
-import Cataloguer
-import ShiftFinder
-import FluxFinder
-import DataAnalyser
-import MovingObjectFinder
-import StreakFinder
+import pipeline.Utilities
+import pipeline.Constants
+import pipeline.Reducer
+import pipeline.Cataloguer
+import pipeline.ShiftFinder
+import pipeline.FluxFinder
+import pipeline.DataAnalyser
+import pipeline.MovingObjectFinder
+import pipeline.StreakFinder
 
 from datetime import datetime
 import os

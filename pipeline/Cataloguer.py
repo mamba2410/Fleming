@@ -4,11 +4,13 @@ from astropy.stats import sigma_clipped_stats
 from astropy.wcs import WCS
 from astropy.table import Table
 from astroquery.astrometry_net import AstrometryNet
+
 import os
 import matplotlib.pyplot as plt
-import FluxFinder
-import Utilities
-import Constants
+
+import pipeline.FluxFinder
+import pipeline.Utilities
+import pipeline.Constants
 
 
 class Cataloguer:

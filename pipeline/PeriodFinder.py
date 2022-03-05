@@ -1,8 +1,7 @@
-import Utilities
+import pipeline.Utilities
 
-import numpy as np
 import os
-
+import numpy as np
 import matplotlib.pyplot as plt
 
 class PeriodFinder:

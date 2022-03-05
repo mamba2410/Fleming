@@ -1,10 +1,12 @@
 from astropy.table import Table
 from astropy.io import fits
 from photutils.centroids import centroid_2dg, centroid_sources
+
 import os
-import Constants
-import Utilities
 import numpy as np
+
+import pipeline.Constants
+import pipeline.Utilities
 
 class ShiftFinder:
 

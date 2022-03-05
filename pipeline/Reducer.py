@@ -5,12 +5,13 @@ from astropy.io.fits import HDUList
 from astropy.io.fits import PrimaryHDU
 from astropy.io.fits import CompImageHDU
 from astropy.io.fits import getval
-import Utilities
-import numpy as np
-import PositionFinder
+
+import pipeline.Utilities
+import pipeline.PositionFinder
+import pipeline.Constants
 
 import os
-import Constants
+import numpy as np
     
 class Reducer:
     
