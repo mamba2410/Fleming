@@ -235,6 +235,8 @@ class Config:
             os.mkdir(self.image_dir)
 
         if not os.path.exists(self.raw_image_dir):
+            print("[Config] WARNING: Raw image dir doesn't exist: {}".format(self.raw_image_dir))
+            print("........ are you sure you set the right variable?")
             os.mkdir(self.raw_image_dir)
 
         if not os.path.exists(self.flux_dir):

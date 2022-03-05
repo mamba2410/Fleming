@@ -1,3 +1,4 @@
+from pipeline import Utilities
 from pipeline import Pipeline
 from pipeline.Constants import Config
 
