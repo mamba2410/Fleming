@@ -315,7 +315,7 @@ class DataAnalyser:
             ('RA', 'float64'),
             ('DEC', 'float64')]
 
-        n_variables = len(self.variable_ids)
+        n_variables = len(variable_ids)
 
         ## Build the results table
         ## Wanted to do it better with numpy but it's hard to name 
