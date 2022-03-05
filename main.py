@@ -1,6 +1,4 @@
-from pipeline import Utilities
-from pipeline import Pipeline
-from pipeline.Constants import Config
+from pipeline import Utilities, Pipeline, Config
 
 from datetime import datetime
 import os

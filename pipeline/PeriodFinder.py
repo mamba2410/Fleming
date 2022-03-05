@@ -1,4 +1,4 @@
-from pipeline import Utilities
+from . import Utilities, Config
 
 import os
 import numpy as np
@@ -236,7 +236,7 @@ class PeriodFinder:
                 period_min,
                 self.config.plot_file_extension
             )
-        plt.title("$\chi^2$ plot for source {:04}, period {:5f}s".format(source_id))
+        plt.title("$\chi^2$ plot for source {:04}, period {:5f}s".format(source_id, period_min))
         plt.xlabel("Period [s]")
         plt.ylabel("$\chi^2$ [arb. u.]")
         plt.savefig(os.path.join(self.config.periods_dir, fname))

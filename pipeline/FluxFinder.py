@@ -9,8 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-from pipeline.Constants import Config
-from pipeline import Utilities
+from . import Utilities, Config
 
 class FluxFinder:
 
@@ -308,6 +307,7 @@ class FluxFinder:
         else:
             plt.scatter(times, normalised_fluxes,
                     marker='.')
+                    #marker='.', color="red")
 
         plt.xlabel("Time [seconds]")
         plt.ylabel("Relative flux [counts/mean]")

@@ -6,8 +6,7 @@ from astropy.io.fits import PrimaryHDU
 from astropy.io.fits import CompImageHDU
 from astropy.io.fits import getval
 
-from pipeline import Utilities
-from pipeline.Constants import Config
+from . import Utilities, Config
 
 import os
 import numpy as np

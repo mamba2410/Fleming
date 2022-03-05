@@ -8,9 +8,7 @@ from astroquery.astrometry_net import AstrometryNet
 import os
 import matplotlib.pyplot as plt
 
-import pipeline.FluxFinder
-import pipeline.Constants
-from pipeline import Utilities
+from . import Utilities, Config
 
 
 class Cataloguer:

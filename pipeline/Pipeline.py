@@ -1,10 +1,4 @@
-from pipeline import Utilities
-from pipeline.Constants import Config
-from pipeline.Reducer import Reducer
-from pipeline.Cataloguer import Cataloguer
-from pipeline.ShiftFinder import ShiftFinder
-from pipeline.FluxFinder import FluxFinder
-from pipeline.DataAnalyser import DataAnalyser
+from pipeline import Config, Reducer, Cataloguer, ShiftFinder, FluxFinder, DataAnalyser, Utilities
 
 from datetime import datetime
 import os

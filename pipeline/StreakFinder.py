@@ -10,10 +10,7 @@ import datetime
 import random
 import math
 
-from pipeline import Utilities
-from pipeline.Constants import Config
-from pipeline.Cataloguer import Cataloguer 
-from pipeline.FluxFinder import FluxFinder
+from . import Utilities, Config, Cataloguer, FluxFinder
 
 class StreakFinder:
     

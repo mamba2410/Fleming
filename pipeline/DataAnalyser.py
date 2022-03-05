@@ -6,9 +6,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from pipeline.FluxFinder import FluxFinder
-from pipeline.Constants import Config
-from pipeline import Utilities
+from . import Utilities, Config
 
 class DataAnalyser:
     
