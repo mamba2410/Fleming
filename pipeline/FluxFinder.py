@@ -423,7 +423,7 @@ class FluxFinder:
 
 
 
-    def create_adjusted_light_curves(self):
+    def create_adjusted_light_curves(self, stds):
         """
         Divides all light curves by the average light curve to remove noise.
         Also removes global effects of the field that vary over time.
@@ -440,7 +440,8 @@ class FluxFinder:
         for path, source_id in Utilities.list_sources(self.config, adjusted=False):
             curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
 
-            
+            self.remove_cosmics(curve, stds)
+
             curve['counts'] /= avg_curve['counts']
             med = np.median(curve['counts'])
             curve['counts'] /= med
@@ -512,19 +513,114 @@ class FluxFinder:
         return image[ly:ry, lx:rx] # note your x,y coords need to be an int
 
 
-    def sort_brightness(self):
+    def remove_cosmics(self, lc, std):
+        """
+        Remove cosmic rays in light curve
+        I don't know the algorithm but it seems to work
 
-        n_sources_cat = len(self.catalogue['id'])
+        Parameters
+        ----------
 
-        if n_sources_cat != self.n_sources:
-            print("[DEBUG] Warn: Catalogue has {} sources, FF has {}"
-                    .format(n_sources_cat, self.n_sources))
+        lc: numpy array 2d
+            Light curve of source
+            
+        """
+        
+        counts = lc['counts']
+        cosmic_index = -1
+        
+        n_measures = len(counts)
+        
+        for i in range(n_measures):
+            
+            m = counts[i]
+            
+            if i == 0:
+                l = counts[i+1]
+            else:
+                l = counts[i-1]
+                
+            if i == len(counts) - 1:
+                r = counts[i-1]
+            else:
+                r = counts[i+1]
+        
+            if m - r > self.config.cosmic_threshold * std and m - l > self.config.cosmic_threshold * std:
+                
+                if cosmic_index != -1:
+                    return False
+              
+                cosmic_index = i
+            
+        if cosmic_index == -1:
+            return False
+        
+        if i == 0:
+            replacement = counts[1]
+        else:
+            replacement = counts[i-1]
+                
+        lc['counts'][cosmic_index] = replacement
+            
+        return True
 
 
-        brightness_indices = np.flip(np.argsort(self.catalogue['flux']))
-        sorted_ids = self.catalogue['id'][brightness_indices]
+    ## TODO: Magic numbers
+    def create_thumbnails(self, source_ids, adjusted=False):
+        """
+        Creates images of the brightest and dimmest frames of each source deemed variable
 
-        return sorted_ids, brightness_indices
+        Parameters
+        ----------
+
+        ff: FluxFinder
+            FluxFinder object used to get a thumbnail slice
+
+            
+        """
+
+        print("[DataAnalyser] Making thumbnails")
+        
+        #for i, (path, source_id) in enumerate(Utilities.list_sources(self.config, adjusted=adjusted)):
+        for i, path, source_id in Utilities.loop_variables(self.config, self.results_table['id']):
+            curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
+            
+            c = curve['counts']
+
+            i_dim = np.argmin(c)
+            i_bright = np.argmax(c)
+            
+            i_x = self.results_table['xcentroid'][i]
+            i_y = self.results_table['ycentroid'][i]
+            
+            print("[DataAnalyser] Creating thumbnail for source id {:04}, centroid {},{}"
+                    .format(source_id, i_x, i_y))
+            
+            ## Magic numbers
+            dim = ff.get_thumbnail(i_dim+1, i_x, i_y, 20, True)
+            bright = ff.get_thumbnail(i_bright+1, i_x, i_y, 20, True)
+
+        
+            fig = plt.figure()
+            fig.add_subplot(1, 2, 1)
+            plt.axis('off')
+
+            dim_norm = ImageNormalize(dim, interval=ZScaleInterval(), stretch=LinearStretch())
+            plt.imshow(dim, origin='upper', cmap='gray', norm = dim_norm)
+
+            
+            fig.add_subplot(1, 2, 2)
+            plt.axis('off')
+
+            bright_norm = ImageNormalize(bright, interval=ZScaleInterval(), stretch=LinearStretch())
+            plt.imshow(bright, origin='upper', cmap='gray', norm = bright_norm)
+            
+            fname= "thumb_{}_{}{:04}{}".format(self.config.image_prefix, self.config.identifier,
+                    source_id, self.config.plot_file_extension)
+            path = os.path.join(self.config.output_dir, fname)
+
+            plt.savefig(path)
+            plt.close()
 
 
     def map_id(self, id2, cat1, cat2, shifts, set_number):

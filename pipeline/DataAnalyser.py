@@ -18,20 +18,9 @@ class DataAnalyser:
     source_means = None
     source_medians = None
     source_stds = None
-
-    adjusted_source_means = None
-    adjusted_source_medians = None
-    adjusted_source_stds = None
-
-    n_variables = 0
-    variable_scores = None
-    variable_ids = None
-    variable_mask = None
-
-    results_table = None
     
 
-    def __init__(self, config):
+    def __init__(self, config, adjusted=False):
         """
         Does all the number-crunching for the pipeline.
         Further refining the data from the light curves and 
@@ -46,17 +35,21 @@ class DataAnalyser:
         """
 
         self.config = config
+        self.adjusted = adjusted
 
 
         ## Set our internal number of sources to how many we have
         ## in the catalogue
         cat = Utilities.read_catalogue(self.config)
 
-        self.source_ids = cat['id']
+        ## Sort our sources in order of brightness
+        brightness_indices = np.flip(np.argsort(cat['flux']))
+        self.source_ids = cat['id'][brightness_indices]
+
         self.n_sources = len(self.source_ids)
 
         
-    def get_means_and_stds(self, source_ids=None, adjusted=False):
+    def get_means_and_stds(self):
         """
         Plot the mean against standard deviation for the light curves
         of all sources with ids as given.
@@ -88,16 +81,15 @@ class DataAnalyser:
         """
         
         ## Make empty arrays
-        source_medians = np.empty(self.n_sources)
-        source_means   = np.empty(self.n_sources)
-        source_stds    = np.empty(self.n_sources)
-        
-        if source_ids == None:
-            source_ids = self.source_ids
+        source_medians = np.zeros(self.n_sources)
+        source_means   = np.zeros(self.n_sources)
+        source_stds    = np.zeros(self.n_sources)
+        n_positives    = np.zeros(self.n_sources)
 
         ## TODO: loop better
         ## For each source
-        for i, path, source_id in Utilities.loop_variables(self.config, source_ids, adjusted=adjusted):
+        for _i, path, source_id in Utilities.loop_variables(self.config, \
+                self.source_ids, adjusted=self.adjusted):
             
             ## Read light curve data from file
             lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
@@ -111,6 +103,7 @@ class DataAnalyser:
                 source_means[i]   = np.mean(lc['counts'])
                 source_stds[i]    = np.std(lc['counts'])
                 source_medians[i] = np.median(lc['counts'])
+                n_positives[i]    = len(np.where(lc['counts'] > 0)[0])
                                                    
                 ### TODO: Value checking
                 #value = std/mean
@@ -119,21 +112,16 @@ class DataAnalyser:
                 #    self.means.append(mean)
                 #    self.id_map.append(int(source_id))
 
-        #Utilities.quicksort([self.means, self.stds, self.id_map], True)
-
-        if adjusted:
-            self.adjusted_source_means   = source_means
-            self.adjusted_source_stds    = source_stds
-            self.adjusted_source_medians = source_medians
-        else:
-            self.source_means   = source_means
-            self.source_stds    = source_stds
-            self.source_medians = source_medians
+        self.source_means   = source_means
+        self.source_stds    = source_stds
+        self.source_medians = source_medians
+        self.n_positives    = n_positives
         
-        return source_means, source_stds, source_medians
+        return source_means, source_stds, source_medians, n_positives
 
 
-    def plot_means_and_stds(self, adjusted=True):
+
+    def plot_means_and_stds(self):
         """
         Plot means against standard deviations of each source.
         Overplotted in red are the stars deemed variable.
@@ -152,11 +140,6 @@ class DataAnalyser:
                 self.source_means,
                 self.source_stds,
                 marker='.');
-        plt.scatter(
-                self.source_means[self.variable_mask],
-                self.source_stds[self.variable_mask],
-                marker='.',
-                color = 'red');
 
         plt.xscale('log')
         plt.yscale('log')
@@ -169,7 +152,7 @@ class DataAnalyser:
         #plt.gca().set_ylim(bottom=1e-9)
         #plt.xlim(self.means[len(self.means)-1] * 1.3, self.means[0] * 0.7)
         
-        if adjusted:
+        if self.adjusted:
             fname = "std_dev_mean_adjusted{}".format(self.config.plot_file_extension)
         else:
             fname = "std_dev_mean{}".format(self.config.plot_file_extension)
@@ -179,12 +162,6 @@ class DataAnalyser:
         plt.savefig(path)
         plt.close()
     
-
-
-
-    ## TODO: Why using index range?
-    ## TODO: Better way of determining score
-            
     
     def get_source_ids(self):
         """
@@ -202,7 +179,7 @@ class DataAnalyser:
             
         
         
-    def get_ids_for_avg(self):
+    def get_ids_for_avg(self, exclude_ids):
         """
         Find IDs of stars to produce average light curve.
         The average light curve is subtracted from each printed light curve to reduce bias
@@ -219,29 +196,27 @@ class DataAnalyser:
 
         """
 
-        print("[DEBUG] Calling `get_ids_for_avg` in DataAnalyser")
-        
-
-        ## Get ids which aren'y deemed variable
-        flat_ids = np.setxor1d(self.source_ids, self.variable_ids)
-
+        n_measures = self.config.set_size * self.config.n_sets
         avg_ids = np.zeros(len(flat_ids))
     
         accepted_index= 0
-        for _i, path, source_id in Utilities.loop_variables(self.config, flat_ids, adjusted=False):
-            curve = np.genfromtxt(path).transpose()
-            n_measures = len(curve[0])
-
-            ## Find indices where counts are positive
-            positive_indices = np.where(curve[1] > 0)[0]
+        for i, _path, source_id in Utilities.loop_variables( \
+                self.config, self.source_ids, adjusted=self.adjusted):
             
+            ## If we run across a source we should avoid
+            ## skip this loop iteration
+            if source_id is in exclude_ids:
+                continue
+
             ## If all our counts are positive
             ## (This means we didn't discard it in the flux finding phase)
-            if len(positive_indices) == n_measures:
+            if self.n_positives[i] == n_measures:
                 avg_ids[accepted_index] = source_id
                 accepted_index += 1
 
+        ## Get rid of trailing zeros
         avg_ids = np.trim_zeros(avg_ids)
+
         return avg_ids
     
 
@@ -318,26 +293,8 @@ class DataAnalyser:
 
         return write_me
 
-
-    def create_avg_curve(self):
-        """
-        Wrapper function user should call to create the average light curve.
-        Prepares the object to be in the state it expects to be 
-        when creating the average light curve.
-
-        """
-
-        mean, std, med = self.get_means_and_stds(source_ids=None, adjusted=False)
-        sorted_ids = self.sort_brightness()
         
-        vd = VariableDetector(self.config, self.n_sources, mean, std, med, sorted_ids)
-        exclude_ids = vd.std_dev_search(self.config.avg_exclude_threshold, adjusted=False)
-
-        avg_ids = self.get_ids_for_avg(exclude_ids)
-        self.make_avg_curve(avg_ids)
-
-
-        
+    ## TODO: Move me
     def output_results(self):
         """
         Save the table of variable stars, in order of decreasing variability
@@ -385,114 +342,4 @@ class DataAnalyser:
         self.results_table = results
 
 
-       
-    def remove_cosmics(self, lc, std):
-        """
-        Remove cosmic rays in light curve
-        I don't know the algorithm but it seems to work
-
-        Parameters
-        ----------
-
-        lc: numpy array 2d
-            Light curve of source
-            
-        """
-        
-        counts = lc['counts']
-        cosmic_index = -1
-        
-        n_measures = len(counts)
-        
-        for i in range(n_measures):
-            
-            m = counts[i]
-            
-            if i == 0:
-                l = counts[i+1]
-            else:
-                l = counts[i-1]
-                
-            if i == len(counts) - 1:
-                r = counts[i-1]
-            else:
-                r = counts[i+1]
-        
-            if m - r > self.config.cosmic_threshold * std and m - l > self.config.cosmic_threshold * std:
-                
-                if cosmic_index != -1:
-                    return False
-              
-                cosmic_index = i
-            
-        if cosmic_index == -1:
-            return False
-        
-        if i == 0:
-            replacement = counts[1]
-        else:
-            replacement = counts[i-1]
-                
-        lc['counts'][cosmic_index] = replacement
-            
-        return True
-
-
-          
-    ## TODO: Magic numbers
-    def create_thumbnails(self, ff, adjusted=False):
-        """
-        Creates images of the brightest and dimmest frames of each source deemed variable
-
-        Parameters
-        ----------
-
-        ff: FluxFinder
-            FluxFinder object used to get a thumbnail slice
-
-            
-        """
-
-        print("[DataAnalyser] Making thumbnails")
-        
-        #for i, (path, source_id) in enumerate(Utilities.list_sources(self.config, adjusted=adjusted)):
-        for i, path, source_id in Utilities.loop_variables(self.config, self.results_table['id']):
-            curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
-            
-            c = curve['counts']
-
-            i_dim = np.argmin(c)
-            i_bright = np.argmax(c)
-            
-            i_x = self.results_table['xcentroid'][i]
-            i_y = self.results_table['ycentroid'][i]
-            
-            print("[DataAnalyser] Creating thumbnail for source id {:04}, centroid {},{}"
-                    .format(source_id, i_x, i_y))
-            
-            ## Magic numbers
-            dim = ff.get_thumbnail(i_dim+1, i_x, i_y, 20, True)
-            bright = ff.get_thumbnail(i_bright+1, i_x, i_y, 20, True)
-
-        
-            fig = plt.figure()
-            fig.add_subplot(1, 2, 1)
-            plt.axis('off')
-
-            dim_norm = ImageNormalize(dim, interval=ZScaleInterval(), stretch=LinearStretch())
-            plt.imshow(dim, origin='upper', cmap='gray', norm = dim_norm)
-
-            
-            fig.add_subplot(1, 2, 2)
-            plt.axis('off')
-
-            bright_norm = ImageNormalize(bright, interval=ZScaleInterval(), stretch=LinearStretch())
-            plt.imshow(bright, origin='upper', cmap='gray', norm = bright_norm)
-            
-            fname= "thumb_{}_{}{:04}{}".format(self.config.image_prefix, self.config.identifier,
-                    source_id, self.config.plot_file_extension)
-            path = os.path.join(self.config.output_dir, fname)
-
-            plt.savefig(path)
-            plt.close()
 
