@@ -1,4 +1,8 @@
 from pipeline import Pipeline
+from pipeline.Constants import Config
+
+from datetime import datetime
+import os
 
 def main():
 
@@ -23,7 +27,7 @@ def main():
     ## Run for all fields
     for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
 
-        config = Constants.Config(
+        config = Config(
             raw_image_dir = os.path.expanduser(raw_image_dir),
             image_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images"),
             image_prefix = image_prefix,
