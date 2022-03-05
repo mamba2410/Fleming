@@ -7,6 +7,7 @@ from .Cataloguer import Cataloguer
 from .ShiftFinder import ShiftFinder
 from .FluxFinder import FluxFinder
 from .DataAnalyser import DataAnalyser
+from .VariableDetector import VariableDetector
 from .PeriodFinder import PeriodFinder
 
 ## Export files here to make importing easier in other files

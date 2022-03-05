@@ -24,7 +24,8 @@ def main():
     ## Config object for a run of data
     ## See `Constants.py` for available options and default values
     config = Config(
-        raw_image_dir = os.path.expanduser("~/mnt/uni/tmp_moving/0301"),
+        #raw_image_dir = os.path.expanduser("~/mnt/uni/tmp_moving/0301"),
+        raw_image_dir = os.path.expanduser("~/mnt/jgt/2022/0301"),
         image_prefix = "l138_0",
         n_sets = 9,
         bias_prefix = "bias",
@@ -82,37 +83,55 @@ def main():
 
     light_curve_time = Utilities.finished_job("making light curves", shift_finder_time)
 
-    
-    ## DataAnalyser
-    da = DataAnalyser(config)
-    
+
     print("[Main] Creating average light curve")
-    da.create_avg_curve()
+
+    ## DataAnalyser, un-adjusted
+    da = DataAnalyser(config, adjusted=False)
+
+    mean, std, med, n_positive = da.get_means_and_stds()
+    source_ids = da.get_source_ids()
+    da.plot_means_and_stds()
+    
+    vd = VariableDetector(config, source_ids, mean, std, med, n_positive, adjusted=False)
+    exclude_ids = vd.std_dev_search(config.avg_exclude_threshold)
+    avg_ids = da.get_ids_for_avg(exclude_ids)
+
+    da.make_avg_curve(avg_ids)
+    ff.plot_avg_light_curve(config.avg_curve_path, show=False)
 
     make_avg_curve_time = Utilities.finished_job("making average curve", light_curve_time)
 
     ## 'adjusts' light curves by dividing by average
     print("[Main] Adjusting")
-    ff.create_adjusted_light_curves()
+    ff.create_adjusted_light_curves(source_ids, std)
 
     adjustment_time = Utilities.finished_job("adjusting light curves", make_avg_curve_time)
 
+
     print("[Main] Getting variables post-adjustment")
-    variable_ids = da.get_variables()
+
+    ## New DataAnalyser for adjusted curves
+    da = DataAnalyser(config, adjusted=True)
+    mean, std, med, n_positive = da.get_means_and_stds()
+    source_ids = da.get_source_ids()
+    da.plot_means_and_stds()
+
+    vd = VariableDetector(config, source_ids, mean, std, med, n_positive, adjusted=True)
+    variable_ids = vd.get_variables()
 
     _ = Utilities.finished_job("post-adjustment", adjustment_time)
 
     print("[Main] Plotting variable curves")
     ff.plot_avg_light_curve(config.avg_curve_path, show=False)
-    ff.plot_all_light_curves(variable_ids, adjusted=True, show=False)
+    ff.plot_given_light_curves(variable_ids, adjusted=True, show=False)
     #ff.plot_adjusted_comparison(variable_ids, show=False)
 
-    source_ids = da.get_source_ids()
     #ff.plot_all_light_curves(source_ids, adjusted=True)
     #ff.plot_adjusted_comparison(source_ids, show=False)
 
     reject_ids = np.setxor1d(source_ids, variable_ids)
-    ff.plot_all_light_curves(reject_ids, plot_dir=config.rejects_dir, adjusted=True, show=False)
+    #ff.plot_all_light_curves(reject_ids, plot_dir=config.rejects_dir, adjusted=True, show=False)
 
     print("[Main] Outputting results")
     da.output_results()
@@ -223,6 +242,6 @@ def post_processing():
 
 if __name__ == "__main__":
     #rename()
-    #setup()
-    #main()
-    post_processing()
+    setup()
+    main()
+    #post_processing()

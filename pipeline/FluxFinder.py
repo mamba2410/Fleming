@@ -423,7 +423,7 @@ class FluxFinder:
 
 
 
-    def create_adjusted_light_curves(self, stds):
+    def create_adjusted_light_curves(self, source_ids, stds):
         """
         Divides all light curves by the average light curve to remove noise.
         Also removes global effects of the field that vary over time.
@@ -437,10 +437,11 @@ class FluxFinder:
                 dtype=self.config.light_curve_dtype).transpose()
 
         #for all files
-        for path, source_id in Utilities.list_sources(self.config, adjusted=False):
+        for i, path, source_id in Utilities.loop_variables(self.config, source_ids, adjusted=False):
             curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
 
-            self.remove_cosmics(curve, stds)
+            if self.remove_cosmics(curve, stds[i]):
+                np.savetxt(path, curve)
 
             curve['counts'] /= avg_curve['counts']
             med = np.median(curve['counts'])

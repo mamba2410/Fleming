@@ -88,7 +88,7 @@ class DataAnalyser:
 
         ## TODO: loop better
         ## For each source
-        for _i, path, source_id in Utilities.loop_variables(self.config, \
+        for i, path, source_id in Utilities.loop_variables(self.config, \
                 self.source_ids, adjusted=self.adjusted):
             
             ## Read light curve data from file
@@ -197,7 +197,7 @@ class DataAnalyser:
         """
 
         n_measures = self.config.set_size * self.config.n_sets
-        avg_ids = np.zeros(len(flat_ids))
+        avg_ids = np.zeros(self.n_sources)
     
         accepted_index= 0
         for i, _path, source_id in Utilities.loop_variables( \
@@ -205,7 +205,7 @@ class DataAnalyser:
             
             ## If we run across a source we should avoid
             ## skip this loop iteration
-            if source_id is in exclude_ids:
+            if source_id in exclude_ids:
                 continue
 
             ## If all our counts are positive
@@ -291,7 +291,7 @@ class DataAnalyser:
 
         np.savetxt(self.config.avg_curve_path, write_me)
 
-        return write_me
+        #return write_me
 
         
     ## TODO: Move me

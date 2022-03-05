@@ -61,27 +61,34 @@ def run(config, show_plots=False, show_errors=False, solve_astrometry=True, skip
     ff.make_light_curves()
 
     light_curve_time = Utilities.finished_job("making light curves", shift_finder_time)
-
-    sorted_ids, brightness_order = ff.sort_brightness()
     
-    ## DataAnalyser
-    da = DataAnalyser(config)
     
     print("[Pipeline] Creating average light curve")
 
-    da.create_avg_curve()
+    ## DataAnalyser, un-adjusted
+    da = DataAnalyser(config, adjusted=False)
+    mean, std, med, n_positive = da.get_means_and_stds()
+    source_ids = da.get_source_ids()
+    da.plot_means_and_stds()
+    
+    vd = VariableDetector(config, source_ids, mean, std, med, n_positive)
+    exclude_ids = vd.std_dev_search(self.config.avg_exclude_threshold, adjusted=self.adjusted)
+    avg_ids = da.get_ids_for_avg(exclude_ids)
+
+    da.make_avg_curve(avg_ids)
 
     make_avg_curve_time = Utilities.finished_job("making average curve", light_curve_time)
 
     ## 'adjusts' light curves by dividing by average
     print("[Pipeline] Adjusting")
-    ff.create_adjusted_light_curves()
-
-    means_adj, stds_adj, medians_adj = da.get_means_and_stds(adjusted=True)
+    ff.create_adjusted_light_curves(std)
 
     adjustment_time = Utilities.finished_job("adjusting light curves", make_avg_curve_time)
 
-    vd.set_statistics(means_adj, stds_adj, medians_adj, adjusted=True)
+    ## Now we have adjusted light curves
+    ## New DataAnalyser for non-adjusted
+    da = DataAnalyser(config, adjusted=True)
+    means_adj, stds_adj, medians_adj, n_positive = da.get_means_and_stds()
 
     print("[Pipeline] Getting variables post-adjustment")
     variable_ids = da.get_variables()

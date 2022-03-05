@@ -76,7 +76,7 @@ def list_images(config, directory, reduced=True):
     """
 
     
-    print("[DEBUG] listing dirs in {}".format(directory))
+    #print("[DEBUG] listing dirs in {}".format(directory))
     image_list = []
 
     if not config.has_sets:
@@ -107,7 +107,7 @@ def loop_images(config, reduced=True):
 
     """
 
-    print("[DEBUG] looping images")
+    #print("[DEBUG] looping images")
     image_list = []
 
     if not config.has_sets:
@@ -148,14 +148,14 @@ def list_sources(config, directory=None, adjusted=False):
 
     
     if directory != None:
-        print("[DEBUG] listing light curves in {}".format(directory))
+        #print("[DEBUG] listing light curves in {}".format(directory))
         d = directory
     else:
         if adjusted:
-            print("[DEBUG] listing adjusted sources")
+            #print("[DEBUG] listing adjusted sources")
             d = config.adjusted_curve_dir
         else:
-            print("[DEBUG] listing sources")
+            #print("[DEBUG] listing sources")
             d = config.light_curve_dir
 
     source_list = []
@@ -176,10 +176,10 @@ def loop_variables(config, ids, adjusted=False):
     """
 
     if adjusted:
-        print("[DEBUG] listing adjusted sources")
+        #print("[DEBUG] listing adjusted sources")
         d = config.adjusted_curve_dir
     else:
-        print("[DEBUG] listing sources")
+        #print("[DEBUG] listing sources")
         d = config.light_curve_dir
             
     variables_list = []

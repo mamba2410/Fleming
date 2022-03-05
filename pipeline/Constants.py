@@ -80,6 +80,7 @@ class Config:
             table_format        = "ascii",
             fits_date_format    = "%Y-%m-%dT%H:%M:%S",
 
+            avg_exclude_threshold   = 0.4,
             variability_threshold   = 0.8,
             variability_max         = 5,
             check_radius            = 5,
@@ -162,6 +163,7 @@ class Config:
         self.table_format       = table_format
         self.fits_date_format   = fits_date_format
 
+        self.avg_exclude_threshold  = avg_exclude_threshold
         self.variability_threshold  = variability_threshold
         self.variability_max        = variability_max
         self.check_radius           = check_radius
