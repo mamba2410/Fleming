@@ -184,141 +184,6 @@ class DataAnalyser:
 
     ## TODO: Why using index range?
     ## TODO: Better way of determining score
-    def get_variable_score(self, source_id, sorted_ids, sorted_stds):
-        """
-        Returns a score determining the variability of the star.
-        
-        Score is the standard deviation of the source compared
-        to the median of the surrounding stars (in index-space)
-
-        Parameters
-        ----------
-
-        index: int
-            Index of variable star to check?
-
-        adjusted: bool, optional
-            Has the source light curve been adjusted?
-
-        """
-        
-        source_index = np.where(sorted_ids == source_id)[0][0]
-       
-        llim = source_index - self.config.check_radius
-        ulim = source_index + self.config.check_radius + 1
-        
-        if llim < 0:
-            llim = 0
-        
-        if ulim > self.n_sources:
-            ulim = self.n_sources
-
-
-        ## Median of standard deviations
-        median_std = np.median(sorted_stds[llim:ulim])
-        variable_score = sorted_stds[source_index]/median_std - 1
-
-        #std_threshold = median_std * (1 + self.config.variability_threshold)
-
-        #if self.source_stds[index] > std_threshold:
-        #    self.variable_mask = np.append(self.variable_mask, source_index)
-        #    #self.variable_means.append(self.means[index])
-        #    #self.variable_stds.append(self.stds[index])
-
-        return variable_score
-        
-        
-
-    ## TODO: Bug of id0000 never deemed variable
-    ## TODO: Exclude 'problematic stars' (eg stars on edge of field)
-    def get_variable_ids(self, adjusted=True):
-        """
-        Calculates the variability score of all stars in the catalogue
-        then builds a list of source indexes which are deemed variable.
-
-        Parameters
-        ----------
-        
-        adjusted: bool, optional
-            Has the source light curve been adjusted?
-
-
-        Returns
-        -------
-
-        self.variable_ids: numpy array
-            Numpy array of all ids which are deemed to be variable candidates.
-
-        """
-
-        cat = Utilities.read_catalogue(self.config)
-        n_sources_cat = len(cat['id'])
-
-        brightness_indices = np.flip(np.argsort(cat['flux']))
-        sorted_ids = cat['id'][brightness_indices]
-        if adjusted:
-            sorted_stds = self.adjusted_source_stds[brightness_indices]
-            sorted_medians = self.adjusted_source_medians[brightness_indices]
-        else:
-            sorted_stds = self.source_stds[brightness_indices]
-            sorted_medians = self.source_medians[brightness_indices]
-
-        if n_sources_cat != self.n_sources:
-            print("[DEBUG] Catalogue has {} sources, DA has {}"
-                    .format(n_sources_cat, self.n_sources))
-
-
-        self.variable_scores = np.zeros(self.n_sources)
-        mins = np.zeros(self.n_sources)
-
-        ## Loop over sources in the catalogue
-        #for i in range(self.n_sources):
-        for i, path, source_id in Utilities.loop_variables(self.config, self.source_ids):
-            self.variable_scores[i] = self.get_variable_score(
-                    source_id, sorted_ids, sorted_stds)
-            lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
-            mins[i] = np.min(lc['counts'])
-
-        signal_to_noise = sorted_medians/sorted_stds
-        self.variable_mask = np.where(
-                (self.variable_scores > self.config.variability_threshold)
-                & (self.variable_scores < self.config.variability_max)
-                & (signal_to_noise > self.config.min_signal_to_noise)
-                & (mins > 0)
-                )[0]
-        self.variable_ids = np.copy(self.source_ids[self.variable_mask])
-
-            #else:
-            #    print("[DEBUG] Rejecting, score of {}".format(self.variable_scores[i]))
-                
-                ## TODO: Check if catalogue is always ordered in ids
-                #row_index = np.where(cat['id'].data==variable_id)
-
-                ## TODO: Build table? Join with existing data
-                #if 'RA' in cat.colnames:
-                #    self.results_table.add_row([
-                #        int(variable_id),
-                #        cat['xcentroid'][row_index],
-                #        cat['ycentroid'][row_index],
-                #        variability,
-                #        cat['RA'][row_index],
-                #        cat['DEC'][row_index]])
-                #else:
-                #    self.results_table.add_row([
-                #        int(variable_id),
-                #        cat['xcentroid'][row_index],
-                #        cat['ycentroid'][row_index], 
-                #        variability,
-                #        0,
-                #        0])
-        
-
-        ## TODO: write results_table to file?
-
-        print("[DataAnalyser] Found {} variables out of {} sources"
-                .format(len(self.variable_ids), self.n_sources))
-
-        return self.variable_ids
             
     
     def get_source_ids(self):
@@ -462,40 +327,14 @@ class DataAnalyser:
 
         """
 
-        _ = self.get_means_and_stds(source_ids=None, adjusted=False)
-        variable_ids = self.get_variable_ids(adjusted=False)
-        avg_ids = self.get_ids_for_avg()
+        mean, std, med = self.get_means_and_stds(source_ids=None, adjusted=False)
+        sorted_ids = self.sort_brightness()
+        
+        vd = VariableDetector(self.config, self.n_sources, mean, std, med, sorted_ids)
+        exclude_ids = vd.std_dev_search(self.config.avg_exclude_threshold, adjusted=False)
+
+        avg_ids = self.get_ids_for_avg(exclude_ids)
         self.make_avg_curve(avg_ids)
-
-
-    def get_variables(self):
-        """
-        Function the user should call to get final IDs of sources deemed variable
-        candiates.
-
-        Returns
-        -------
-
-        variable_ids: numpy array
-            IDs of each source considered variable
-
-        """
-
-        _means, stds, _meds = self.get_means_and_stds(source_ids=None, adjusted=True)
-
-        ## Remove any cosmic rays in the light curve
-        for i, path, source_id in Utilities.loop_variables(self.config, self.source_ids, adjusted=True):
-            curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
-
-            ## TODO: sigma clip
-            ## TODO: move this (to flux finder?)
-            if self.remove_cosmics(curve, stds[i]):
-                #print("[DataAnalyser] Removed cosmics on id {}".format(source_id))
-                np.savetxt(path, curve)
-
-        variable_ids = self.get_variable_ids(adjusted=True)
-
-        return variable_ids
 
 
         

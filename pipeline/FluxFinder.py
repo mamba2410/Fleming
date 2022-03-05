@@ -512,6 +512,20 @@ class FluxFinder:
         return image[ly:ry, lx:rx] # note your x,y coords need to be an int
 
 
+    def sort_brightness(self):
+
+        n_sources_cat = len(self.catalogue['id'])
+
+        if n_sources_cat != self.n_sources:
+            print("[DEBUG] Warn: Catalogue has {} sources, FF has {}"
+                    .format(n_sources_cat, self.n_sources))
+
+
+        brightness_indices = np.flip(np.argsort(self.catalogue['flux']))
+        sorted_ids = self.catalogue['id'][brightness_indices]
+
+        return sorted_ids, brightness_indices
+
 
     def map_id(self, id2, cat1, cat2, shifts, set_number):
         """

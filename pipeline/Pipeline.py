@@ -62,11 +62,13 @@ def run(config, show_plots=False, show_errors=False, solve_astrometry=True, skip
 
     light_curve_time = Utilities.finished_job("making light curves", shift_finder_time)
 
+    sorted_ids, brightness_order = ff.sort_brightness()
     
     ## DataAnalyser
     da = DataAnalyser(config)
     
     print("[Pipeline] Creating average light curve")
+
     da.create_avg_curve()
 
     make_avg_curve_time = Utilities.finished_job("making average curve", light_curve_time)
@@ -75,7 +77,11 @@ def run(config, show_plots=False, show_errors=False, solve_astrometry=True, skip
     print("[Pipeline] Adjusting")
     ff.create_adjusted_light_curves()
 
+    means_adj, stds_adj, medians_adj = da.get_means_and_stds(adjusted=True)
+
     adjustment_time = Utilities.finished_job("adjusting light curves", make_avg_curve_time)
+
+    vd.set_statistics(means_adj, stds_adj, medians_adj, adjusted=True)
 
     print("[Pipeline] Getting variables post-adjustment")
     variable_ids = da.get_variables()
