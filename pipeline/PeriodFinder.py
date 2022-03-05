@@ -1,4 +1,4 @@
-import pipeline.Utilities
+from pipeline import Utilities
 
 import os
 import numpy as np

@@ -1,11 +1,10 @@
-import pipeline.Utilities
-import pipeline.Constants
-import pipeline.Reducer
-import pipeline.Cataloguer
-import pipeline.ShiftFinder
-import pipeline.FluxFinder
-import pipeline.DataAnalyser
-import pipeline.PeriodFinder
+from pipeline import Utilities
+from pipeline.Constants import Config
+from pipeline.Reducer import Reducer
+from pipeline.Cataloguer import Cataloguer
+from pipeline.ShiftFinder import ShiftFinder
+from pipeline.FluxFinder import FluxFinder
+from pipeline.DataAnalyser import DataAnalyser
 
 from datetime import datetime
 import os

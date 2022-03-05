@@ -5,8 +5,8 @@ from photutils.centroids import centroid_2dg, centroid_sources
 import os
 import numpy as np
 
-import pipeline.Constants
-import pipeline.Utilities
+from pipeline import Utilities
+from pipeline.Constants import Config
 
 class ShiftFinder:
 

@@ -5,7 +5,7 @@ import parse
 import numpy as np
 from datetime import datetime
 
-import pipeline.Constants
+from pipeline.Constants import Config
 
 
 ## ==================================

@@ -10,10 +10,10 @@ import datetime
 import random
 import math
 
-import pipeline.Constants
-import pipeline.Utilities
-import pipeline.Cataloguer
-import pipeline.FluxFinder
+from pipeline import Utilities
+from pipeline.Constants import Config
+from pipeline.Cataloguer import Cataloguer 
+from pipeline.FluxFinder import FluxFinder
 
 class StreakFinder:
     

@@ -1,12 +1,10 @@
-import pipeline.Utilities
-import pipeline.Constants
-import pipeline.Reducer
-import pipeline.Cataloguer
-import pipeline.ShiftFinder
-import pipeline.FluxFinder
-import pipeline.DataAnalyser
-import pipeline.MovingObjectFinder
-import pipeline.StreakFinder
+from pipeline import Utilities
+from pipeline.Constants import Config
+from pipeline.Reducer import Reducer
+from pipeline.Cataloguer import Cataloguer
+from pipeline.ShiftFinder import ShiftFinder
+from pipeline.FluxFinder import FluxFinder
+from pipeline.DataAnalyser import DataAnalyser
 
 from datetime import datetime
 import os
@@ -22,14 +20,14 @@ def run(config, show_plots=False, solve_astrometry=True, skip_existing_images=Tr
     ## Reducer
     ## Takes raw images, subtracts bias and divides by flat field
 
-    r = Reducer.Reducer(config, "No filter")        ## Only "No filter" for Trius
+    r = Reducer(config, "No filter")        ## Only "No filter" for Trius
     r.reduce(skip_existing=skip_existing_images)    ## Skip images that have already been reduced
 
     reducer_time = Utilities.finished_job("reducing images", start_time)
     
     ## Cataloguer
     ## Creates a catalogue of stars found in the given image
-    c = Cataloguer.Cataloguer(config)
+    c = Cataloguer(config)
 
     catalogue_set_number = 1
     catalogue_image_number = 1
@@ -53,7 +51,7 @@ def run(config, show_plots=False, solve_astrometry=True, skip_existing_images=Tr
     ## ShiftFinder
     ## Gets the shift of each star for each image in the series
     print("[Pipeline] Finding shifts in each image")
-    sf = ShiftFinder.ShiftFinder(config, n_sources)
+    sf = ShiftFinder(config, n_sources)
     sf.generate_shifts()
     reference_ids = sf.get_reference_ids()
      
@@ -61,7 +59,7 @@ def run(config, show_plots=False, solve_astrometry=True, skip_existing_images=Tr
      
 
     ## FluxFinder
-    ff = FluxFinder.FluxFinder(config, n_sources)
+    ff = FluxFinder(config, n_sources)
     print("[Pipeline] Making initial light curves")
 
     ## Find the flux of each star in each image then create a light curve
@@ -72,7 +70,7 @@ def run(config, show_plots=False, solve_astrometry=True, skip_existing_images=Tr
 
     
     ## DataAnalyser
-    da = DataAnalyser.DataAnalyser(config)
+    da = DataAnalyser(config)
     
     print("[Pipeline] Creating average light curve")
     da.create_avg_curve()

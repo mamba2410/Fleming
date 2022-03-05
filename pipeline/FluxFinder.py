@@ -9,8 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-import pipeline.Constants
-import pipeline.Utilities
+from pipeline.Constants import Config
+from pipeline import Utilities
 
 class FluxFinder:
 

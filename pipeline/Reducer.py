@@ -6,9 +6,8 @@ from astropy.io.fits import PrimaryHDU
 from astropy.io.fits import CompImageHDU
 from astropy.io.fits import getval
 
-import pipeline.Utilities
-import pipeline.PositionFinder
-import pipeline.Constants
+from pipeline import Utilities
+from pipeline.Constants import Config
 
 import os
 import numpy as np

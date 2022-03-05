@@ -12,11 +12,11 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-import pipeline.Constants
-import pipeline.Cataloguer
-import pipeline.Utilities
-import pipeline.FluxFinder
-import pipeline.ShiftFinder
+from pipeline.Constants import Config
+from pipeline.Cataloguer import Cataloguer
+from pipeline.FluxFinder import FluxFinder
+from pipeline.ShiftFinder import ShiftFinder
+from pipeline import Utilities
 
 class MovingObjectFinder():
     

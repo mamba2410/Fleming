@@ -9,8 +9,8 @@ import os
 import matplotlib.pyplot as plt
 
 import pipeline.FluxFinder
-import pipeline.Utilities
 import pipeline.Constants
+from pipeline import Utilities
 
 
 class Cataloguer:
