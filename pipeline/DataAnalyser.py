@@ -295,7 +295,7 @@ class DataAnalyser:
 
         
     ## TODO: Move me
-    def output_results(self):
+    def output_results(self, variable_ids):
         """
         Save the table of variable stars, in order of decreasing variability
 
@@ -305,7 +305,7 @@ class DataAnalyser:
         
         cat = Utilities.read_catalogue(self.config)
         #indices = np.where(cat['id'] == self.variable_ids)
-        _intersect, indices, _indices2 = np.intersect1d(cat['id'], self.variable_ids,
+        _intersect, indices, _indices2 = np.intersect1d(cat['id'], variable_ids,
                 return_indices=True, assume_unique=True)
 
         t = [('id', 'int64'),
@@ -339,7 +339,7 @@ class DataAnalyser:
         #Utilities.make_reg_file(self.config.output_dir,
         #        self.config.image_prefix + "_variables", self.results_table)
 
-        self.results_table = results
+        #self.results_table = results
 
 
 

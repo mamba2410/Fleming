@@ -153,13 +153,16 @@ class VariableDetector:
         for i, path, source_id in Utilities.loop_variables( \
                 self.config, self.source_ids, adjusted=self.adjusted):
 
+            print("[VariableDetector] Finding period for source {}/{}".format(i, self.n_sources))
             ## TODO: Make period range config variable
-            _P, _P_err, A, A_err, _phi, _offset = pf.period_search(source_id, path)
+            _P, _P_err, A, A_err, _phi, _offset = pf.period_search(
+                    source_id, path, n_samples=self.config.n_sample_periods)
             amplitude_score[i] = A/A_err
 
+        np.savetxt(self.config.workspace_dir + "/amplitude_test.txt", amplitude_score)
         variable_mask = np.where(amplitude_score > self.config.amplitude_score_threshold)[0]
 
-        variable_ids = np.copy(source_ids[variable_mask])
+        variable_ids = np.copy(self.source_ids[variable_mask])
         self.variable_ids_a = variable_ids
 
         print("[VariableDetector] amplitude search: Found {} variables out of {} sources"
@@ -185,7 +188,8 @@ class VariableDetector:
         variable_ids_a = self.amplitude_search()
 
         ## Stars which apppear in both are returned
-        variable_ids = np.intersect1d(variable_ids_s, variable_ids_a)
+        #variable_ids = np.intersect1d(variable_ids_s, variable_ids_a)
+        variable_ids = np.concatenate(variable_ids_s, variable_ids_a)
 
         return variable_ids
 

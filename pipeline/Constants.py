@@ -83,6 +83,7 @@ class Config:
             avg_exclude_threshold   = 0.4,
             variability_threshold   = 0.8,
             variability_max         = 5,
+            amplitude_score_threshold = 1e4,
             check_radius            = 5,
             cosmic_threshold        = 5,
             flux_cutoff             = 100,
@@ -96,6 +97,7 @@ class Config:
             period_chi2_range       = 3,
             period_max_iterations   = 10,
             period_width_adjustment = 1.5,
+            n_sample_periods        = 2000,
 
             image_width         = 2432,
             image_height        = 1616,
@@ -166,6 +168,7 @@ class Config:
         self.avg_exclude_threshold  = avg_exclude_threshold
         self.variability_threshold  = variability_threshold
         self.variability_max        = variability_max
+        self.amplitude_score_threshold = amplitude_score_threshold
         self.check_radius           = check_radius
         self.cosmic_threshold       = cosmic_threshold
         self.flux_cutoff            = flux_cutoff
@@ -179,6 +182,7 @@ class Config:
         self.period_chi2_range       = period_chi2_range
         self.period_max_iterations   = period_max_iterations  
         self.period_width_adjustment = period_width_adjustment
+        self.n_sample_periods        = n_sample_periods
 
         self.image_width        = image_width
         self.image_height       = image_height

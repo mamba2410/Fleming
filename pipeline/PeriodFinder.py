@@ -132,6 +132,14 @@ class PeriodFinder:
         omega_min = omegas[idx_min]
         chi2_min  = chi2[idx_min]
 
+        ## If our minimum is on the edge of our range
+        ## ie there is no clear period within the range
+        if idx_min == n_samples-1 or idx_min == 0:
+            #return period_min, period_min_err, amplitude, amplitude_err, phi, B
+            ## Return unphysical values
+            return 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
+
+
         ## What's our changes like near the minimum?
         omega_next = omegas[idx_min+1]
         chi2_next  = chi2[idx_min+1]
@@ -149,7 +157,7 @@ class PeriodFinder:
         while (np.max(chi2) - chi2_min) > self.config.period_chi2_range \
               and iteration < self.config.period_max_iterations:
 
-            print("[PeriodFinder] Iteration: {:02} for id {:04}".format(iteration, source_id))
+            #print("[PeriodFinder] Iteration: {:02} for id {:04}".format(iteration, source_id))
 
             ## Find an approximate gradient to guestimate width of next omega range
             approx_gradient = np.sqrt(chi2_next - chi2_min)/(omega_next - omega_min)
@@ -169,6 +177,10 @@ class PeriodFinder:
             _params, chi2 = self.search_omegas(counts, time, errors, omegas)
             idx_min = np.argmin(chi2)
 
+            ## If we break here, we cropped too small
+            if idx_min == n_samples-1 or idx_min == 0:
+                return 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
+
             omega_min = omegas[idx_min]
             chi2_min  = chi2[idx_min]
 
@@ -180,7 +192,15 @@ class PeriodFinder:
 
         ## Assume we are good enough
 
-        idx_dchi2 = np.where(chi2[idx_min:] > chi2_min + 1)[0][0]
+        large_chi2 = np.where(chi2[idx_min:] > chi2_min + 1)[0]
+
+        ## If our delta chi2 never goes above 1
+        ## ie we have no good minimum
+        if len(large_chi2) == 0:
+            ## Return unphysical values
+            return 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
+
+        idx_dchi2 = large_chi2[0]
         idx_dchi2 += idx_min
         
         ## Uncertainty of omega is 1/sqrt(curvature at minimum)

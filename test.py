@@ -32,7 +32,8 @@ def main():
         fits_extension = ".fits",
         fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
         has_filter_in_header = False,
-        variability_threshold = 0.5,
+        n_sample_periods = 500,
+        amplitude_score_threshold = 1e5,
     )
     
     ## Reducer
@@ -118,7 +119,10 @@ def main():
     da.plot_means_and_stds()
 
     vd = VariableDetector(config, source_ids, mean, std, med, n_positive, adjusted=True)
-    variable_ids = vd.get_variables()
+    #variable_ids = vd.get_variables()
+    variable_ids_s = vd.std_dev_search(config.variability_threshold)
+    variable_ids_a = vd.amplitude_search()
+    variable_ids = variable_ids_a
 
     _ = Utilities.finished_job("post-adjustment", adjustment_time)
 
@@ -135,7 +139,6 @@ def main():
 
     print("[Main] Outputting results")
     da.output_results()
-    da.plot_means_and_stds()
     da.create_thumbnails(ff)
     
     _ = Utilities.finished_job("everything", start_time)
