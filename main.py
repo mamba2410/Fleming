@@ -81,5 +81,73 @@ def main():
     _ = Utilities.finished_job("all fields", start_time)
 
 
+
+## TODO: Copy flats for ones that need it?
+def rename():
+    """
+    Rename certain problematic images/fields.
+    Should only need to run once per machine (unless you delete your
+    JGT images folder).
+
+    Assumes they are copied straight from the JGT backup.
+    Change the base path for each field and they should rename to a format
+    that will play nice with the pipeline.
+    Also if you make any fields that need renaming, please add them here.
+    It will make future observers' lives easier.
+
+    Ideal format:
+    lxxx_y_s_iii.fit
+    xxx: llongitude integer part
+    y: longitude decimal part, 0 or 5
+    s: set number, 1..n_sets
+    iii: image_number, 001..050 
+
+    """
+
+    print("[TEST] Starting rename")
+
+    ## l141 first set
+    base_path = os.path.expanduser("~/mnt/jgt/2020/0206Trius")
+    for i in range(1, 51):
+        os.rename(
+                os.path.join(base_path, "l141_{:03d}.fit".format(i)),
+                os.path.join(base_path, "l141_1_{:03d}.fit".format(i))
+        )
+
+    ## l140.5 -> l140_5
+    base_path = os.path.expanduser("~/mnt/jgt/2019/0221")
+    for s in range(1, 8):
+        for i in range(1, 51):
+            os.rename(
+                    os.path.join(base_path, "l140.5_{:1d}_{:03d}.fit".format(s, i)),
+                    os.path.join(base_path, "l140_5_{:1d}_{:03d}.fit".format(s, i))
+            )
+
+    ## L140 -> l140_0
+    base_path = os.path.expanduser("~/mnt/jgt/2019/0218")
+    for s in range(1, 8):
+        for i in range(1, 51):
+            os.rename(
+                    os.path.join(base_path, "L140_{:1d}_{:03d}.fit".format(s, i)),
+                    os.path.join(base_path, "l140_0_{:1d}_{:03d}.fit".format(s, i))
+            )
+
+    ## Make l138_0 image numbers range from 1-50
+    base_path = os.path.expanduser("~/mnt/uni/tmp_moving/0301")
+    for i in range(40, 40+50):
+        os.rename(
+                os.path.join(base_path, "l138_0_1_{:03d}.fits".format(i)),
+                os.path.join(base_path, "l138_0_1_{:03d}.fits".format(i-39)),
+        )
+
+    for i in range(51, 51+50):
+        os.rename(
+                os.path.join(base_path, "l138_0_3_{:03d}.fits".format(i)),
+                os.path.join(base_path, "l138_0_3_{:03d}.fits".format(i-50)),
+        )
+
+    print("[Main] Finished renaming")
+
 if __name__ == "__main__":
     main()
+    #rename()
