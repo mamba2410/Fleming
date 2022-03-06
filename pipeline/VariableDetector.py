@@ -3,6 +3,57 @@ from . import PeriodFinder, Utilities, Config
 import numpy as np
 
 class VariableDetector:
+    """
+    VariableDetector class.
+
+    Does everything to do with determining variability in a source.
+
+    Usually associated with a DataAnalyser object.
+
+    Attributes
+    ----------
+
+
+    config: Config
+        Config object for the field
+
+    n_sources: int
+        Number of sources the object knows about
+
+    source_ids: numpy array
+        IDs of all sources we know about.
+
+    means: numpy array
+        Means of the light curves of each source.
+
+    medians: numpy array
+        Medians of the light curves of each source.
+
+    stds: numpy array
+        Standard deviations of the light curves of each source.
+
+    n_positive: numpy array
+        Number of positive values in each light curve
+
+    adjusted: bool
+        Are we an object for adjusted or non-adjusted set?
+
+    variable_scores: numpy array
+        Scores for standard deviation search
+    
+    amplitude_scores: numpy array
+        Scores for period search
+
+    period_stats: numpy array
+        Table of primary period, amplitude, phase, offset and errors for each source.
+
+    variable_ids_s: numpy array
+        IDs of all sources deemed variable through the standard deviation check
+
+    variable_ids_a: numpy array
+        IDs of all sources deemed variable through the amplitude search
+
+    """
 
     config = None
 
@@ -12,10 +63,16 @@ class VariableDetector:
     means = None
     stds  = None
     medians = None
+    n_positive = None
 
     variable_scores = None
     amplitude_scores = None
     period_stats = None
+
+    variable_ids_s = None
+    variable_ids_a = None
+
+    adjusted = False
 
     def __init__(self, config, source_ids, means, stds, medians, n_positive, adjusted=True):
         self.config = config
@@ -43,11 +100,14 @@ class VariableDetector:
         Parameters
         ----------
 
-        index: int
-            Index of variable star to check?
+        source_id: int
+            ID of the source to get the score of
 
-        adjusted: bool, optional
-            Has the source light curve been adjusted?
+        Returns
+        -------
+
+        variable_score: int
+            Score of the variable
 
         """
         
@@ -70,7 +130,7 @@ class VariableDetector:
         return variable_score
         
         
-    ## TODO: move signal to noise out of here
+    ## TODO: move signal to noise calculation out of here
     def std_dev_search(self, threshold):
         """
         Calculates the variability score of all stars in the catalogue
@@ -79,14 +139,13 @@ class VariableDetector:
         Parameters
         ----------
         
-        adjusted: bool, optional
-            Has the source light curve been adjusted?
-
+        threshold: float64
+            Threshold score, above which is deemed variable
 
         Returns
         -------
 
-        self.variable_ids: numpy array
+        self.variable_ids_s: numpy array
             Numpy array of all ids which are deemed to be variable candidates.
 
         """
@@ -111,33 +170,7 @@ class VariableDetector:
 
         variable_ids = np.copy(self.source_ids[self.variable_mask])
         self.variable_ids_s = variable_ids
-
-            #else:
-            #    print("[DEBUG] Rejecting, score of {}".format(self.variable_scores[i]))
-                
-                ## TODO: Check if catalogue is always ordered in ids
-                #row_index = np.where(cat['id'].data==variable_id)
-
-                ## TODO: Build table? Join with existing data
-                #if 'RA' in cat.colnames:
-                #    self.results_table.add_row([
-                #        int(variable_id),
-                #        cat['xcentroid'][row_index],
-                #        cat['ycentroid'][row_index],
-                #        variability,
-                #        cat['RA'][row_index],
-                #        cat['DEC'][row_index]])
-                #else:
-                #    self.results_table.add_row([
-                #        int(variable_id),
-                #        cat['xcentroid'][row_index],
-                #        cat['ycentroid'][row_index], 
-                #        variability,
-                #        0,
-                #        0])
         
-
-        ## TODO: write results_table to file?
 
         print("[VariableDetector] std search: Found {} variables out of {} sources"
                 .format(len(variable_ids), self.n_sources))
@@ -147,6 +180,20 @@ class VariableDetector:
 
     def amplitude_search(self, amplitude_score_threshold):
         """
+        Finds the most prominent period for each source.
+        Reports the period, amplitude, phase, offset and uncertainties.
+
+        Parameters
+        ----------
+
+        amplitude_score_threshold: float64
+            Threshold score, above which is deemed variable
+
+        Returns
+        -------
+
+        period_stats: numpy array
+            Table of the statistics for each source
 
         """
 
@@ -167,19 +214,20 @@ class VariableDetector:
                 self.config, self.source_ids, adjusted=self.adjusted):
 
             print("[VariableDetector] Finding period for source {}/{}".format(i, self.n_sources))
+
             ## TODO: Make period range config variable
-            #_P, _P_err, A, A_err, _phi, _offset = pf.period_search(
             period_stats[i] = pf.period_search(
                     source_id, path, n_samples=self.config.n_sample_periods)
             A = period_stats[i]['amplitude']
             A_err = period_stats[i]['amplitude_err']
+
+            ## TODO: Use signal to noise or amplitude per std?
             #amplitude_score[i] = A/A_err
             amplitude_score[i] = A/self.stds[i]
 
         self.period_stats = period_stats
         self.amplitude_scores = amplitude_score
 
-        np.savetxt(self.config.workspace_dir + "/amplitude_test.txt", amplitude_score)
         variable_mask = np.where(amplitude_score > amplitude_score_threshold)[0]
 
         variable_ids = np.copy(self.source_ids[variable_mask])
@@ -193,8 +241,9 @@ class VariableDetector:
 
     def get_variables(self):
         """
-        Function the user should call to get final IDs of sources deemed variable
-        candiates.
+        Do all searches to find sources which are variable.
+        Recommended to call each search yourself, this is just
+        here for convenience.
 
         Returns
         -------
@@ -209,11 +258,30 @@ class VariableDetector:
 
         ## Stars which apppear in both are returned
         #variable_ids = np.intersect1d(variable_ids_s, variable_ids_a)
+
+        ## Stars which were in one or the other are returned
+        ## TODO: May contain duplicate IDs
         variable_ids = np.concatenate(variable_ids_s, variable_ids_a)
 
         return variable_ids
 
     def get_period_stats(self, ids=[]):
+        """
+        Retrieve the period stats for the given IDs
+
+        Parameters
+        ----------
+
+        ids: array, optional
+            IDs to get stats of. If empty, gives all known stats
+
+        Returns
+        -------
+
+        period_stats: numpy array
+            Table of the statistics for each source
+
+        """
         if len(ids) == 0:
             return self.period_stats
         else:
@@ -221,7 +289,25 @@ class VariableDetector:
                 return_indices=True, assume_unique=True)
             return self.period_stats[indices]
 
+
     def get_scores(self, ids=[]):
+        """
+        Retrieve the scores of each given source.
+
+        Parameters
+        ----------
+
+        ids: array, optional
+            IDs to get stats of. If empty, gives all known scores
+
+        Returns
+        -------
+
+        period_stats: numpy array
+            Table of the statistics for each source
+
+        """
+
         if len(ids) == 0:
             return self.variable_scores, self.amplitude_scores
         else:

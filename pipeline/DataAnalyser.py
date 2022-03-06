@@ -40,6 +40,9 @@ class DataAnalyser:
     source_stds: numpy array
         Standard deviations of the light curves of each source.
 
+    n_positive: numpy array
+        Number of positive values in each light curve
+
     adjusted: bool
         Are we an object for adjusted or non-adjusted set?
 
@@ -53,6 +56,7 @@ class DataAnalyser:
     source_means = None
     source_medians = None
     source_stds = None
+    n_positive = None
 
     adjusted = False
     
