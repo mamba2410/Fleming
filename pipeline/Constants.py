@@ -83,7 +83,7 @@ class Config:
             avg_exclude_threshold   = 0.4,
             variability_threshold   = 0.8,
             variability_max         = 5,
-            amplitude_score_threshold = 1e4,
+            amplitude_score_threshold = 0.85,
             check_radius            = 5,
             cosmic_threshold        = 5,
             flux_cutoff             = 100,
@@ -97,7 +97,7 @@ class Config:
             period_chi2_range       = 3,
             period_max_iterations   = 10,
             period_width_adjustment = 1.5,
-            n_sample_periods        = 2000,
+            n_sample_periods        = 100,
 
             image_width         = 2432,
             image_height        = 1616,

@@ -1,4 +1,4 @@
-from . import Utilities, Config, PeriodFinder
+from . import PeriodFinder, Utilities, Config
 
 import numpy as np
 

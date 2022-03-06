@@ -142,8 +142,8 @@ def main():
     #ff.plot_all_light_curves(reject_ids, plot_dir=config.rejects_dir, adjusted=True, show=False)
 
     print("[Main] Outputting results")
-    da.output_results(variable_ids, vd)
-    ff.create_thumbnails(variable_ids)
+    results_table = da.output_results(variable_ids, vd)
+    ff.create_thumbnails(results_table)
     
     _ = Utilities.finished_job("everything", start_time)
 
