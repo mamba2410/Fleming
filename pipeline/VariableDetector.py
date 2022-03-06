@@ -171,7 +171,8 @@ class VariableDetector:
                     source_id, path, n_samples=self.config.n_sample_periods)
             A = period_stats[i]['amplitude']
             A_err = period_stats[i]['amplitude_err']
-            amplitude_score[i] = A/A_err
+            #amplitude_score[i] = A/A_err
+            amplitude_score[i] = A/self.stds[i]
 
         self.period_stats = period_stats
 

@@ -33,8 +33,8 @@ def main():
         fits_extension = ".fits",
         fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
         has_filter_in_header = False,
-        n_sample_periods = 250,
-        amplitude_score_threshold = 1e5,
+        n_sample_periods = 100,
+        amplitude_score_threshold = 0.8,
     )
     
     ## Reducer

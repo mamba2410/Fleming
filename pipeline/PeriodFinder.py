@@ -218,7 +218,7 @@ class PeriodFinder:
         ## Plot light curve and overplot sine wave
         plt.scatter(time, counts, marker="x")
         plt.plot(time, attempted_fit, color="red")
-        fname = "compare_{}_{}{:04}_P{:05f}{}".format(
+        fname = "compare_{}_{}{:04}_P{:05.0f}{}".format(
                 self.config.image_prefix,
                 self.config.identifier,
                 source_id,
@@ -249,7 +249,7 @@ class PeriodFinder:
 
         ## Plot initial chi2 distribution
         plt.plot(2*np.pi/omegas_orig, chi2_orig)
-        fname = "chi2_{}_{}{:04}_P{:5f}{}".format(
+        fname = "chi2_{}_{}{:04}_P{:05.0f}{}".format(
                 self.config.image_prefix,
                 self.config.identifier,
                 source_id,
