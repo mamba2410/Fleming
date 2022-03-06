@@ -14,6 +14,33 @@ from datetime import datetime
 from . import Utilities, Config
 
 class FluxFinder:
+    """
+    Flux Finder class.
+
+    Anything to do with creating light curves and getting 
+    statistics from the images.
+
+    Only one `FluxFinder` object per field is needed.
+
+    Attributes
+    ----------
+
+    config: Config
+        Config object for the field
+
+    x_shifts, y_shifts: numpy array
+        Pixel shifts of each star since first image
+
+    catalogue: numpy array
+        DAO star catalogue containing IDs, fluxes etc of each source.
+
+    n_sources: int
+        Number of sources the object knows about
+    
+    n_measures: int
+        Number of total images for the field. (n_sets * set_size)
+
+    """
 
     config  = None
     
@@ -30,6 +57,16 @@ class FluxFinder:
     def __init__(self, config, n_sources):
         """
         Initialises class and reads shifts and catalogue from files.
+
+        Parameters
+        ----------
+        
+        config: Config
+            Config object for the field
+
+        n_sources: int
+            Number of sources the object knows about
+
         """
 
         self.config = config
@@ -75,7 +112,15 @@ class FluxFinder:
 
     def find_fluxes(self, set_number=0, image_number=0):
         """
-        Find the fluxes of all stars in a given image
+        Find the fluxes of all stars in a given image.
+
+        Sums up the counts in a circle around a center.
+        Subtracts background via an annulus.
+        Backgrounds can be overestimated if another star is too close.
+
+        Estimates uncertainties using Poisson noise models from
+        2nd year observational techniques.
+        Uncertainties aren't concrete, but it's something.
 
         Parameters
         ----------
@@ -86,6 +131,12 @@ class FluxFinder:
         image_number: int
             Number of image in set
 
+        Returns
+        -------
+
+        phot_table2: Table
+            Table containing the fluxes and uncertainties of all sources.
+
         """
 
         print("[FluxFinder] Finding fluxes in image: set {:1}; image: {:03}"
@@ -94,6 +145,7 @@ class FluxFinder:
         #get total shift from first image to this one
         x_shift, y_shift = self.get_total_shift(set_number=set_number, image_number=image_number)
         
+        ## TODO: Assumes catalogue is first image here
         #add the shift onto the positions of the stars in the first image
         #to find their positions in this image
         x = self.catalogue['xcentroid'] + x_shift
@@ -106,19 +158,24 @@ class FluxFinder:
         x_max = self.config.image_width
         y_max = self.config.image_height
 
-        # Local background subtraction
+        ## Local background subtraction
 
-        # Define size of background aperture
+        ## Define size of background aperture
         background_annuli = CircularAnnulus(
                 positions,
                 r_in=self.config.inner_radius,
                 r_out=self.config.outer_radius)
+
+        ## Star apertures
+        ## TODO: Variable aperture sizes?
         star_apertures = CircularAperture(positions, r=self.config.inner_radius-1)
+
         all_apertures = [star_apertures, background_annuli]
 
         # find counts in each aperture and annulus
         phot_table2 = aperture_photometry(image_data, all_apertures)
 
+        ## Probably not needed, will almost always be the same
         n_sources_phot = len(phot_table2['id'])
 
         if n_sources_phot != self.n_sources:
@@ -140,7 +197,7 @@ class FluxFinder:
             
             x, y = positions[i]
 
-            #check that largest aperture does not exceed the boundaries of the image
+            ## Check that largest aperture does not exceed the boundaries of the image
             if Utilities.is_within_boundaries(x, y, x_max, y_max, self.config.outer_radius):
 
                 # Calc the mean background in the second aperture ring
@@ -169,7 +226,9 @@ class FluxFinder:
                 counts_err = np.sqrt(star_var + bkg_var)
                 phot_table2['counts_err'] = counts_err
 
-            ## For debug purposes
+            ## If aperture doesn't fit, don't bother with the star.
+            ## If it's too close to the edge of the chip, it's probably not the best data anyway
+
             #else:
             #    print("[FluxFinder] Source {} is not within boundary {},{}; {},{}"
             #            .format(i, x_max, y_max, x, y))
@@ -183,6 +242,12 @@ class FluxFinder:
 
     ## TODO: Breaks if no sets
     def make_light_curves(self):
+        """
+        Turns a series of images into a series of light curves.
+        Writes light curve for each source to a file.
+
+        """
+
         if self.config.has_sets == False:
             print("[FluxFinder] Error: Cannot make light curves, not implemented for has_sets=False")
             exit()
@@ -190,6 +255,7 @@ class FluxFinder:
         times = [line.rstrip(self.config.line_ending) for line in open(self.config.time_path)]
         n_times = len(times)
 
+        ## Datetime object of the start of the observation
         dt_obs_start = datetime.strptime(times[0], self.config.fits_date_format)
 
         ## Light curves
@@ -199,7 +265,7 @@ class FluxFinder:
         light_curves = np.zeros((self.n_sources, 3, n_times))
           
         ## iterate over each image
-        ## image_index iterates over each measurement
+        ## image_index iterates over each image/time/measurement
         ## j iterates over source index
         image_index = 0
         for _, s, i in Utilities.loop_images(self.config):
@@ -207,30 +273,36 @@ class FluxFinder:
             
             source_table = self.find_fluxes(s, i)
                             
-            #iterate through each source in the table
+            ## Iterate through each source in the table
             for j in range(self.n_sources):
                     
                 #get time matching the image
                 date_and_time = times[image_index]
 
-                ## TODO: Make time format a config param
                 ## Use datetime objects to calc time difference
                 dt_image = datetime.strptime(date_and_time, self.config.fits_date_format)
                 dt_elapsed = dt_image - dt_obs_start
                 seconds_elapsed = dt_elapsed.seconds
                 
 
-                #if median has reasonable value
-                #if source_table['median'][j] > 0: 
-                light_curves[j][1][image_index] = float(source_table['residual_aperture_sum_med'][j])
-                light_curves[j][2][image_index] = float(source_table['counts_err'][j])
+                ## TODO: Decide if using mean or median
+                #counts = source_table['residual_aperture_sum_median'][j]
+                counts = source_table['residual_aperture_sum_mean'][j]
 
-                #else:
-                #    print("[FluxFinder] Rejecting value for source {}, median is {}"
-                #            .format(t['id'][j], t['median'][j]))
+                ## If counts has reasonable value
+                if counts > 0: 
+                    light_curves[j][1][image_index] = float(counts[j])
+                    light_curves[j][2][image_index] = float(source_table['counts_err'][j])
+                else:
+                    ## If not (probably if we failed to find fluxes, 
+                    ## or if we ran off the edge of the chip)
+                    ## Set to some unphysical error values.
+                    light_curves[j][1][image_index] = -1.0
+                    light_curves[j][2][image_index] = 1e9
 
                 ## Include time, regardless of value
                 light_curves[j][0][image_index] = seconds_elapsed
+
             image_index += 1
 
         #loop through all light curves, writing them out to a file
@@ -263,8 +335,11 @@ class FluxFinder:
         curve_path: string, optional
             Path to save the image to
 
+        plot_dir: string, optional
+            Directory to save the finished plots to
+
         adjusted: bool, optional
-            Has the lighth curve been divided by the average flux?
+            Has the light curve been divided by the average flux?
 
         show: bool, optional
             Should we show the plot?
@@ -272,12 +347,23 @@ class FluxFinder:
         close: bool, optional
             Should we close the plot? (useful for overplotting)
 
+        show_errors: bool, optional
+            Should we plot error bars?
+
+
+        Returns
+        -------
+
+        times: numpy array
+            x-axis of the plot
+
         """
 
         print("[FluxFinder] Plotting light curve for source {} (adjusted={})"
                 .format(source_id, adjusted))
 
         
+        ## If we weren't given a path, make one
         if curve_path == None:
             fname = self.config.source_format_str.format(source_id)
             if adjusted:
@@ -285,17 +371,17 @@ class FluxFinder:
             else:
                 curve_path = os.path.join(self.config.light_curve_dir, fname)
 
-        #table = Table.read(curve_path, format=self.config.table_format)
+        ## Get the light curve data
         curve = np.genfromtxt(curve_path, dtype=self.config.light_curve_dtype).transpose()
         
         times = curve['time']
         fluxes = curve['counts']
         err = curve['counts_err']
         
-
-        mean = np.mean(fluxes)
-        median = np.median(fluxes)
+        ## Normalise to ~1
+        #mean = np.mean(fluxes)
         #normalised_fluxes = fluxes / mean
+        median = np.median(fluxes)
         normalised_fluxes = fluxes/median
         normalised_err    = err/median
         
@@ -309,47 +395,73 @@ class FluxFinder:
         else:
             plt.scatter(times, normalised_fluxes,
                     marker='.')
-                    #marker='.', color="red")
 
         plt.xlabel("Time [seconds]")
         plt.ylabel("Relative flux [counts/mean]")
-
-        #plt.ylim(0.9 * minimum, maximum * 1.1)
-        ## Debug
-        #plt.ylim(0, 2)
         
+
+        ## If we don't have an ID, assume we're looking at the average
         if source_id == None:
             fname = "LC_{}_avg.jpg".format(self.config.image_prefix)
-            plt.title("Light curve for average of sources (adjusted={})"
-                .format(adjusted))
+            plt.title("Average light curve of bright sources in {} (adjusted={})"
+                .format(self.config.image_prefix, adjusted))
+
         elif source_id >= 0:
             fname = "LC_{}_{}{:04}.jpg".format(
                 self.config.image_prefix, self.config.identifier, source_id)
-            plt.title("Light curve for source {:04} (adjusted={})"
-                .format(source_id, adjusted))
+            plt.title("Light curve for source {:04} in {} (adjusted={})"
+                .format(source_id, self.config.image_prefix, adjusted))
+
         else:
             print("[FluxFinder] Error: Cannot plot light curve, source id '{}' invalid"
                     .format(source_id))
-            plt.title("Light curve for unknown source (id {}) (adjusted={})"
-                .format(source_id, adjusted))
+            plt.title("Light curve for unknown source (id {}) in {} (adjusted={})"
+                .format(source_id, self.config.image_prefix, adjusted))
             
+        ## Should we show the image to the user? (useful for ipython notebooks)
         if show:
             plt.show()
 
+        ## If we don't have a place to save, default to the output directory
         if plot_dir == None:
             image_file = os.path.join(self.config.output_dir, fname)
         else:
             image_file = os.path.join(plot_dir, fname)
         plt.savefig(image_file)
 
+        ## If we should close the plot.
+        ## Usually yes, but can be used to overplot things.
         if close:
             plt.close()
 
+        ## Return the x-axis for things to be overplot
         return times
 
 
         
     def plot_given_light_curves(self, ids, plot_dir=None, adjusted=False, show=False, show_errors=False):
+        """
+        Give a list of source ids and plot the light curve for all of them.
+
+        Parameters
+        ----------
+
+        ids: numpy array
+            Array of source ids to plot
+
+        plot_dir: string, optional
+            Directory to save the finished plots to
+
+        adjusted: bool, optional
+            Has the light curve been divided by the average flux?
+
+        show: bool, optional
+            Should we show the plot?
+
+        show_errors: bool, optional
+            Show error bars?
+
+        """
         for _i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
             _ = self.plot_light_curve(
                     source_id=source_id, curve_path=path, plot_dir=plot_dir,
@@ -358,24 +470,57 @@ class FluxFinder:
     ## TODO: make cleaner, allow passing optional function/array to plot_light_curve?
     def plot_given_curves_periods(self, ids, period_stats, 
             plot_dir=None, show=False, show_errors=False, adjusted=True):
+        """
+
+        Plot a light curve, as well as its primary period.
+
+        Parameters
+        ----------
+
+        ids: numpy array
+            Array of source ids to plot
+
+        period_stats: numpy array
+            Array of period, amplitude, phase, offset and errors
+
+        plot_dir: string, optional
+            Directory to save the finished plots to
+
+        adjusted: bool, optional
+            Has the light curve been divided by the average flux?
+
+        show: bool, optional
+            Should we show the plot?
+
+        show_errors: bool, optional
+            Show error bars?
+
+        """
 
         for i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
+            ## Plot base light curve
             times = self.plot_light_curve(source_id=source_id, curve_path=path, plot_dir=plot_dir,
                     adjusted=adjusted, show=False, close=False, show_errors=show_errors)
+
+            ## If we have a nice period, plot it
             if period_stats['period'][i] > 0:
                 model = period_stats['amplitude'][i] * np.sin(2*np.pi/period_stats['period'][i] * times
                         + period_stats['phi'][i]) + period_stats['offset'][i]
             else:
+            ## If not, just use a flat line
                 model = np.ones(len(times))
             plt.plot(times, model, color="red")
+
 
             if show:
                 plt.show()
 
+            ## Save with different prefix
             fname = "LCP_{}_{}{:04}.jpg".format(
                 self.config.image_prefix, self.config.identifier, source_id)
-            plt.title("Light curve for source {:04} with period {:.4f}h (adjusted={})"
-                .format(source_id, period_stats['period'][i]/3600, adjusted))
+            plt.title("Light curve for source {:04} with period {:.4f}h in {} (adjusted={})"
+                .format(source_id, period_stats['period'][i]/3600, self.config.image_prefix, adjusted))
+
             if plot_dir == None:
                 image_file = os.path.join(self.config.output_dir, fname)
             else:
@@ -387,6 +532,28 @@ class FluxFinder:
 
 
     def plot_adjusted_comparison(self, ids, plot_dir=None, show=False, show_errors=False):
+        """
+        Plot light curve and its adjusted version together.
+        Useful for checking if the adjustment went right, or if it was a false
+        source detection (like a hot pixel)
+
+        Parameters
+        ----------
+
+        ids: numpy array
+            Array of source ids to plot
+
+        plot_dir: string, optional
+            Directory to save the finished plots to
+
+        show: bool, optional
+            Should we show the plot?
+
+        show_errors: bool, optional
+            Show error bars?
+
+        """
+
         for _i, _path, source_id in Utilities.loop_variables(self.config, ids, adjusted=False):
             self.plot_light_curve(
                     source_id=source_id, curve_path=None, plot_dir=plot_dir,
@@ -395,66 +562,33 @@ class FluxFinder:
                     source_id=source_id, curve_path=None, plot_dir=plot_dir,
                     adjusted=True, show=show, close=True, show_errors=show_errors)
 
-    def plot_avg_light_curve(self, curve_path, adjusted=False, show=False, show_errors=False):
-        self.plot_light_curve(source_id=None, curve_path=curve_path,
-                adjusted=adjusted, show=show, show_errors=show_errors)
 
-
-    
-
-    ## TODO: Duplicate somewhere else
-    #use median
-    def make_avg_curve(self, ids):
+    def plot_avg_light_curve(self, curve_path, adjusted=False, show=False, show_errors=False, plot_dir=None):
         """
-        Makes an average light curve with the brightest stars to subtract noise
-        from the resulting curves
+        Plot the light curve used as the average of bright sources.
 
         Parameters
         ----------
-        ids: [int]
-            IDs of sources to take average of
+
+        ids: numpy array
+            Array of source ids to plot
+
+        plot_dir: string, optional
+            Directory to save the finished plots to
+
+        adjusted: bool, optional
+            Has the light curve been divided by the average flux?
+
+        show: bool, optional
+            Should we show the plot?
+
+        show_errors: bool, optional
+            Show error bars?
+
         """
-        print("[DEBUG] Calling `make_avg_curve` in FluxFinder")
-                
-        #iterate through each star in the given list
-        for i in range(len(ids)):
-            source_id = ids[i]
-            fname = self.config.source_format_str.format(source_id)
-            path = os.path.join(self.config.light_curve_dir, fname)
-            #print("source_id: {}".format(source_id))
-            
-            #get the light curve for star i
-            t = Table.read(path, format=self.config.table_format)
-            
-            fluxes = t['counts']
-            
-            if i == 0:
-                for j in range(len(fluxes)):
-                    self.avg_fluxes.append(0)
-                self.times = t['time']
 
-            #find the mean flux of star i
-            mean = Utilities.mean(fluxes)
-            
-            #add each flux measurement in the light curve at time index k 
-            #of star i to a list which will store the average flux at each point
-            #in time k. Note the flux added to the list is divided by the mean
-            #to reduce any bias(?). The average contribution to each k is 1.
-            for k in range(len(fluxes)):
-                self.avg_fluxes[k] = self.avg_fluxes[k] + (fluxes[k] / mean)
-            
-        #calculate average flux at each time of measurement l
-        for l in range(len(self.avg_fluxes)):
-            self.avg_fluxes[l] = self.avg_fluxes[l] / len(ids)
-                
-        #generate table of average light curve
-        light_curve = Table([self.times, self.avg_fluxes], names = ('time','counts') )
-
-        #save average light curve
-        fname = "{}_avg{}".format(self.config.image_prefix, self.config.standard_file_extension)
-        path = os.path.join(self.config.workspace_dir, fname)
-
-        light_curve.write(path, format=self.config.table_format, overwrite=True)
+        self.plot_light_curve(source_id=None, curve_path=curve_path,
+                adjusted=adjusted, show=show, show_errors=show_errors, plot_dir=plot_dir)
 
 
 
@@ -464,9 +598,19 @@ class FluxFinder:
         Also removes global effects of the field that vary over time.
 
         Creates an 'adjusted' light curve.
+        Also removes cosmic rays.
+
+        Parameters
+        ----------
+
+        source_ids: numpy array
+            IDs of the sources to 'adjust'
+
+        stds: numpy array
+            Standard deviations of each light curve
 
         """
-        print("[DEBUG] Calling `divide_by_average` in FluxFinder")
+        #print("[DEBUG] Calling `divide_by_average` in FluxFinder")
 
         avg_curve = np.genfromtxt(self.config.avg_curve_path,
                 dtype=self.config.light_curve_dtype).transpose()
@@ -536,13 +680,13 @@ class FluxFinder:
         if lx < 0:
             lx = 0
         
-        if rx > self.config.image_width:
+        if rx >= self.config.image_width:
             rx = self.config.image_width-1
         
         if ly < 0:
             ly = 0
         
-        if ry > self.config.image_height:
+        if ry >= self.config.image_height:
             ry = self.config.image_height - 1
             
             
@@ -559,6 +703,9 @@ class FluxFinder:
 
         lc: numpy array 2d
             Light curve of source
+
+        std: numpy array
+            Standard deviation of the curve
             
         """
         
@@ -617,8 +764,6 @@ class FluxFinder:
 
         print("[FluxFinder] Creating thumbnails")
 
-        
-        #for i, (path, source_id) in enumerate(Utilities.list_sources(self.config, adjusted=adjusted)):
         for i, path, source_id in Utilities.loop_variables(self.config, results_table['id']):
             curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
             
@@ -667,6 +812,8 @@ class FluxFinder:
         """
         Find ID of a star from catalogue 2 in catalogue 1
         Expects everything in Table objects
+
+        Not used as of DR2
 
         """
         
