@@ -12,6 +12,27 @@ from . import Utilities, Config
 
 
 class Cataloguer:
+    """
+    Cataloguer object.
+
+    Anything to do with cataloguing all stars in a field, finding coordinates etc.
+    Only need one `Cataloguer` object per field.
+
+    Uses DAO star finder to get ids and basic info.
+    Uses astrometry.net local solving to find coordinate system.
+
+    Attributes
+    ----------
+
+    config: Config
+        Config object for the field.
+
+    n_sources: int
+        Number of sources that the cataloguer found.
+
+    wcs: WCS
+        World Coordinate System (thing that holds ra/dec information from astrometry)
+    """
 
     config = None           # Config object
     n_sources = 0           # Number of sources discovered
@@ -20,13 +41,7 @@ class Cataloguer:
     
     def __init__(self, config):
         """
-        Cataloguer class
-
-        Does all the handling of identifying and cataloguing stars
-        in a field.
-        
-        Uses DAO star finder to get ids and basic info.
-        Uses astrometry.net local solving to find coordinate system.
+        Cataloguer constructor.
 
         Parameters
         ----------
@@ -66,14 +81,14 @@ class Cataloguer:
         ## TODO: Magic number, threshold passed to find_stars
         ## Build a catalogue of all stars in the image
         ## sources is a Table object
-        sources = find_stars(image_data, 5)
+        sources = self.find_stars(image_data, 5)
         self.filter_stars(sources, image_data)
         self.n_sources = len(sources['id'])
 
         print("[Cataloguer] Found {} suitable sources".format(self.n_sources))
 
-        ## Write all sources to a file
-        ## TODO: Necessary?
+        ## Write all sources to a reg file
+        ## TODO: Necessary? we already have a catalogue file.
         #Utilities.make_reg_file(self.config.workspace_dir, self.config.image_prefix, sources)
         
         ## Add the RA and DEC for each star to the catalogue
@@ -135,8 +150,6 @@ class Cataloguer:
 
 
 
-    ## TODO: Add RA/DEC to sources table
-    ##       and have error checking for astrometry wcs
     def convert_to_ra_and_dec(self, image_file, sources, solve=True):
         """
         Converts all the source positions in the image to RA and DEC.
@@ -175,10 +188,7 @@ class Cataloguer:
             sources['DEC'][i] = dec
     
 
-
-
     
-    ## TODO: Add threshold and FWHM and make config variables
     def get_wcs_header(self, file, solve=True):
         """
         Get World Coordinate System header.
@@ -264,48 +274,46 @@ class Cataloguer:
                             self.config.line_ending))
 
         
-## End of class
 
-
-## TODO: Magic numbers, make configs
-def find_stars(image_data, threshold):
-    """
-    Catalogue all sources that meet the thresholds in the image.
-    Uses DAOStarFinder.
-
-    Parameters
-    ----------
-
-    image_data: fits image data
-        Image data to find stars in.
-
-    threshold: float
-        Number of standard deviations above the background which
-        an object is classed as a star.
-
-    Returns
-    -------
-
-    sources: Table
-        Table of all the information DAO found about the star.
-
-    """
+    ## TODO: Magic numbers, make configs
+    def find_stars(self, image_data, threshold):
+        """
+        Catalogue all sources that meet the thresholds in the image.
+        Uses DAOStarFinder.
     
-    ## Get mean median and standard deviation of the image data
-    mean, median, std = sigma_clipped_stats(image_data, sigma=3.0, maxiters=5)  
+        Parameters
+        ----------
     
-    ## Initiate finder object. Will find objects with a FWHM of 8 pixels
-    ## and 3-sigma times the background
-    daofind = DAOStarFinder(fwhm=8, threshold=threshold*std) 
+        image_data: fits image data
+            Image data to find stars in.
     
-    ## Find sources
-    sources = daofind(image_data)
-
-    ## Set table format
-    for col in sources.colnames:    
-        sources[col].info.format = '%.8g'
-       
-    return sources
+        threshold: float
+            Number of standard deviations above the background which
+            an object is classed as a star.
+    
+        Returns
+        -------
+    
+        sources: Table
+            Table of all the information DAO found about the star.
+    
+        """
+        
+        ## Get mean median and standard deviation of the image data
+        mean, median, std = sigma_clipped_stats(image_data, sigma=3.0, maxiters=5)  
+        
+        ## Initiate finder object. Will find objects with a FWHM of 8 pixels
+        ## and 3-sigma times the background
+        daofind = DAOStarFinder(fwhm=8, threshold=threshold*std) 
+        
+        ## Find sources
+        sources = daofind(image_data)
+    
+        ## Set table format
+        for col in sources.colnames:    
+            sources[col].info.format = '%.8g'
+           
+        return sources
 
                     
 
