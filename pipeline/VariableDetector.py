@@ -13,6 +13,8 @@ class VariableDetector:
     stds  = None
     medians = None
 
+    variable_scores = None
+    amplitude_scores = None
     period_stats = None
 
     def __init__(self, config, source_ids, means, stds, medians, n_positive, adjusted=True):
@@ -143,12 +145,13 @@ class VariableDetector:
         return self.variable_ids_s
 
 
-    def amplitude_search(self):
+    def amplitude_search(self, amplitude_score_threshold):
         """
 
         """
 
-        pf = PeriodFinder.PeriodFinder(self.config)
+        #pf = PeriodFinder.PeriodFinder(self.config)
+        pf = PeriodFinder(self.config)
 
         amplitude_score = np.zeros(self.n_sources)
 
@@ -175,9 +178,10 @@ class VariableDetector:
             amplitude_score[i] = A/self.stds[i]
 
         self.period_stats = period_stats
+        self.amplitude_scores = amplitude_score
 
         np.savetxt(self.config.workspace_dir + "/amplitude_test.txt", amplitude_score)
-        variable_mask = np.where(amplitude_score > self.config.amplitude_score_threshold)[0]
+        variable_mask = np.where(amplitude_score > amplitude_score_threshold)[0]
 
         variable_ids = np.copy(self.source_ids[variable_mask])
         self.variable_ids_a = variable_ids
@@ -210,11 +214,20 @@ class VariableDetector:
 
         return variable_ids
 
-    def get_period_stats(self, ids=None):
-        if ids == None:
+    def get_period_stats(self, ids=[]):
+        if len(ids) == 0:
             return self.period_stats
         else:
             _intersect, indices, _indices2 = np.intersect1d(self.source_ids, ids,
                 return_indices=True, assume_unique=True)
             return self.period_stats[indices]
+
+    def get_scores(self, ids=[]):
+        if len(ids) == 0:
+            return self.variable_scores, self.amplitude_scores
+        else:
+            _intersect, indices, _indices2 = np.intersect1d(self.source_ids, ids,
+                return_indices=True, assume_unique=True)
+            return self.variable_scores[indices], self.amplitude_scores[indices]
+
 

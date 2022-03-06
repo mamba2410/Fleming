@@ -1,3 +1,4 @@
+import pipeline
 from pipeline import *
 
 from datetime import datetime
@@ -34,7 +35,7 @@ def main():
         fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
         has_filter_in_header = False,
         n_sample_periods = 100,
-        amplitude_score_threshold = 0.8,
+        amplitude_score_threshold = 0.85,
     )
     
     ## Reducer
@@ -122,7 +123,7 @@ def main():
     vd = VariableDetector(config, source_ids, mean, std, med, n_positive, adjusted=True)
     #variable_ids = vd.get_variables()
     variable_ids_s = vd.std_dev_search(config.variability_threshold)
-    variable_ids_a = vd.amplitude_search()
+    variable_ids_a = vd.amplitude_search(config.amplitude_score_threshold)
     variable_ids = variable_ids_a
 
     _ = Utilities.finished_job("post-adjustment", adjustment_time)
@@ -141,8 +142,8 @@ def main():
     #ff.plot_all_light_curves(reject_ids, plot_dir=config.rejects_dir, adjusted=True, show=False)
 
     print("[Main] Outputting results")
-    da.output_results(variable_ids)
-    da.create_thumbnails(ff)
+    da.output_results(variable_ids, vd)
+    ff.create_thumbnails(variable_ids)
     
     _ = Utilities.finished_job("everything", start_time)
 

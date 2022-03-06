@@ -1,12 +1,10 @@
 from astropy.table import Table
-from PIL import Image
-from astropy.visualization import (ZScaleInterval, LinearStretch, ImageNormalize)
 
 import os 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from . import Utilities, Config
+from . import Utilities, Config, VariableDetector
 
 class DataAnalyser:
     
@@ -295,7 +293,7 @@ class DataAnalyser:
 
         
     ## TODO: Move me
-    def output_results(self, variable_ids):
+    def output_results(self, variable_ids, vd):
         """
         Save the table of variable stars, in order of decreasing variability
 
@@ -309,7 +307,8 @@ class DataAnalyser:
                 return_indices=True, assume_unique=True)
 
         t = [('id', 'int64'),
-            ('variability', 'float64'),
+            ('variability_score', 'float64'),
+            ('amplitude_score', 'float64'),
             ('xcentroid', 'float64'),
             ('ycentroid', 'float64'),
             ('RA', 'float64'),
@@ -317,13 +316,16 @@ class DataAnalyser:
 
         n_variables = len(variable_ids)
 
+        variability_score, amplitude_score = vd.get_scores(variable_ids)
+
         ## Build the results table
         ## Wanted to do it better with numpy but it's hard to name 
         ## the columns
         results = np.empty(n_variables, dtype=t)
         for j, idx in enumerate(indices):
             results['id'][j] = cat['id'][idx]
-            results['variability'][j] = self.variable_scores[idx]
+            results['variability_score'][j] = variability_score[j]
+            results['amplitude_score'][j] = amplitude_score[j]
             results['xcentroid'][j] = cat['xcentroid'][idx]
             results['ycentroid'][j] = cat['ycentroid'][idx]
             results['RA'][j] = cat['RA'][idx]
@@ -334,12 +336,13 @@ class DataAnalyser:
         results_path = os.path.join(self.config.output_dir, results_fname)
 
         #np.savetxt(results_path, results)
-        np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f')
+        np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f %.10f')
 
         #Utilities.make_reg_file(self.config.output_dir,
         #        self.config.image_prefix + "_variables", self.results_table)
 
         #self.results_table = results
+        return results
 
 
 

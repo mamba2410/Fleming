@@ -1,4 +1,6 @@
 from astropy.table import Table
+from astropy.visualization import (ZScaleInterval, LinearStretch, ImageNormalize)
+from PIL import Image
 from photutils import aperture_photometry
 from photutils import CircularAperture
 from photutils import CircularAnnulus
@@ -600,7 +602,7 @@ class FluxFinder:
 
 
     ## TODO: Magic numbers
-    def create_thumbnails(self, source_ids, adjusted=False):
+    def create_thumbnails(self, results_table, adjusted=False, show=False):
         """
         Creates images of the brightest and dimmest frames of each source deemed variable
 
@@ -613,10 +615,11 @@ class FluxFinder:
             
         """
 
-        print("[DataAnalyser] Making thumbnails")
+        print("[FluxFinder] Creating thumbnails")
+
         
         #for i, (path, source_id) in enumerate(Utilities.list_sources(self.config, adjusted=adjusted)):
-        for i, path, source_id in Utilities.loop_variables(self.config, self.results_table['id']):
+        for i, path, source_id in Utilities.loop_variables(self.config, results_table['id']):
             curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
             
             c = curve['counts']
@@ -624,15 +627,15 @@ class FluxFinder:
             i_dim = np.argmin(c)
             i_bright = np.argmax(c)
             
-            i_x = self.results_table['xcentroid'][i]
-            i_y = self.results_table['ycentroid'][i]
+            i_x = results_table['xcentroid'][i]
+            i_y = results_table['ycentroid'][i]
             
             print("[DataAnalyser] Creating thumbnail for source id {:04}, centroid {},{}"
                     .format(source_id, i_x, i_y))
             
             ## Magic numbers
-            dim = ff.get_thumbnail(i_dim+1, i_x, i_y, 20, True)
-            bright = ff.get_thumbnail(i_bright+1, i_x, i_y, 20, True)
+            dim = self.get_thumbnail(i_dim+1, i_x, i_y, 20, True)
+            bright = self.get_thumbnail(i_bright+1, i_x, i_y, 20, True)
 
         
             fig = plt.figure()
@@ -652,6 +655,9 @@ class FluxFinder:
             fname= "thumb_{}_{}{:04}{}".format(self.config.image_prefix, self.config.identifier,
                     source_id, self.config.plot_file_extension)
             path = os.path.join(self.config.output_dir, fname)
+
+            if show:
+                plt.show()
 
             plt.savefig(path)
             plt.close()
