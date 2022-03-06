@@ -150,7 +150,6 @@ class VariableDetector:
 
         """
 
-        #pf = PeriodFinder.PeriodFinder(self.config)
         pf = PeriodFinder(self.config)
 
         amplitude_score = np.zeros(self.n_sources)
