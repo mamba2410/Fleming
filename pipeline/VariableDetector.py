@@ -13,6 +13,8 @@ class VariableDetector:
     stds  = None
     medians = None
 
+    period_stats = None
+
     def __init__(self, config, source_ids, means, stds, medians, n_positive, adjusted=True):
         self.config = config
 
@@ -150,14 +152,28 @@ class VariableDetector:
 
         amplitude_score = np.zeros(self.n_sources)
 
+        period_stats = np.zeros(self.n_sources, dtype=[
+            ('period', 'float64'),
+            ('period_err', 'float64'),
+            ('amplitude', 'float64'),
+            ('amplitude_err', 'float64'),
+            ('phi', 'float64'),
+            ('offset', 'float64'),
+            ])
+
         for i, path, source_id in Utilities.loop_variables( \
                 self.config, self.source_ids, adjusted=self.adjusted):
 
             print("[VariableDetector] Finding period for source {}/{}".format(i, self.n_sources))
             ## TODO: Make period range config variable
-            _P, _P_err, A, A_err, _phi, _offset = pf.period_search(
+            #_P, _P_err, A, A_err, _phi, _offset = pf.period_search(
+            period_stats[i] = pf.period_search(
                     source_id, path, n_samples=self.config.n_sample_periods)
+            A = period_stats[i]['amplitude']
+            A_err = period_stats[i]['amplitude_err']
             amplitude_score[i] = A/A_err
+
+        self.period_stats = period_stats
 
         np.savetxt(self.config.workspace_dir + "/amplitude_test.txt", amplitude_score)
         variable_mask = np.where(amplitude_score > self.config.amplitude_score_threshold)[0]
@@ -193,4 +209,11 @@ class VariableDetector:
 
         return variable_ids
 
+    def get_period_stats(self, ids=None):
+        if ids == None:
+            return self.period_stats
+        else:
+            _intersect, indices, _indices2 = np.intersect1d(self.source_ids, ids,
+                return_indices=True, assume_unique=True)
+            return self.period_stats[indices]
 

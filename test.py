@@ -12,6 +12,7 @@ def setup():
         shutil.rmtree("./workspace/results/")
         shutil.rmtree("./workspace/rejects/")
         shutil.rmtree("./workspace/adjusted_light_curves/")
+        shutil.rmtree("./workspace/periods/")
     except:
         pass
 
@@ -32,7 +33,7 @@ def main():
         fits_extension = ".fits",
         fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
         has_filter_in_header = False,
-        n_sample_periods = 500,
+        n_sample_periods = 250,
         amplitude_score_threshold = 1e5,
     )
     
@@ -129,6 +130,8 @@ def main():
     print("[Main] Plotting variable curves")
     ff.plot_avg_light_curve(config.avg_curve_path, show=False)
     ff.plot_given_light_curves(variable_ids, adjusted=True, show=False)
+    #ff.plot_given_curves_periods(source_ids, period_stats, show=False)
+
     #ff.plot_adjusted_comparison(variable_ids, show=False)
 
     #ff.plot_all_light_curves(source_ids, adjusted=True)

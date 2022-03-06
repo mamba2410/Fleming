@@ -343,13 +343,46 @@ class FluxFinder:
         if close:
             plt.close()
 
+        return times
+
 
         
     def plot_given_light_curves(self, ids, plot_dir=None, adjusted=False, show=False, show_errors=False):
         for _i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
-            self.plot_light_curve(
+            _ = self.plot_light_curve(
                     source_id=source_id, curve_path=path, plot_dir=plot_dir,
                     adjusted=adjusted, show=show, close=True, show_errors=show_errors)
+
+    ## TODO: make cleaner, allow passing optional function/array to plot_light_curve?
+    def plot_given_curves_periods(self, ids, period_stats, 
+            plot_dir=None, show=False, show_errors=False, adjusted=True):
+
+        for i, path, source_id in Utilities.loop_variables(self.config, ids, adjusted=adjusted):
+            times = self.plot_light_curve(source_id=source_id, curve_path=path, plot_dir=plot_dir,
+                    adjusted=adjusted, show=False, close=False, show_errors=show_errors)
+            if period_stats['period'][i] > 0:
+                model = period_stats['amplitude'][i] * np.sin(2*np.pi/period_stats['period'][i] * times
+                        + period_stats['phi'][i]) + period_stats['offset'][i]
+            else:
+                model = np.ones(len(times))
+            plt.plot(times, model, color="red")
+
+            if show:
+                plt.show()
+
+            fname = "LCP_{}_{}{:04}.jpg".format(
+                self.config.image_prefix, self.config.identifier, source_id)
+            plt.title("Light curve for source {:04} with period {:.4f}h (adjusted={})"
+                .format(source_id, period_stats['period'][i]/3600, adjusted))
+            if plot_dir == None:
+                image_file = os.path.join(self.config.output_dir, fname)
+            else:
+                image_file = os.path.join(plot_dir, fname)
+
+            plt.savefig(image_file)
+
+            plt.close()
+
 
     def plot_adjusted_comparison(self, ids, plot_dir=None, show=False, show_errors=False):
         for _i, _path, source_id in Utilities.loop_variables(self.config, ids, adjusted=False):
