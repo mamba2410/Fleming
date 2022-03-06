@@ -7,6 +7,43 @@ import matplotlib.pyplot as plt
 from . import Utilities, Config, VariableDetector
 
 class DataAnalyser:
+    """
+    DataAnalyser class.
+
+    Does all the number-crunching for the pipeline.
+    Further refining the data from the light curves and 
+    transforming it.
+
+    All arrays are sorted in order of descending brightness
+    as per the catalogue.
+
+    One per set of light curves (adjusted or not).
+
+    Attributes
+    ----------
+
+    config: Config
+        Config object for the field
+
+    n_sources: int
+        Number of sources the object knows about
+
+    source_ids: numpy array
+        IDs of all sources we know about.
+
+    source_means: numpy array
+        Means of the light curves of each source.
+
+    source_medians: numpy array
+        Medians of the light curves of each source.
+
+    source_stds: numpy array
+        Standard deviations of the light curves of each source.
+
+    adjusted: bool
+        Are we an object for adjusted or non-adjusted set?
+
+    """
     
     config = None
 
@@ -16,22 +53,11 @@ class DataAnalyser:
     source_means = None
     source_medians = None
     source_stds = None
+
+    adjusted = False
     
 
     def __init__(self, config, adjusted=False):
-        """
-        Does all the number-crunching for the pipeline.
-        Further refining the data from the light curves and 
-        transforming it.
-
-        Parameters
-        ----------
-
-        config: Config
-            Config object
-
-        """
-
         self.config = config
         self.adjusted = adjusted
 
@@ -49,9 +75,8 @@ class DataAnalyser:
         
     def get_means_and_stds(self):
         """
-        Plot the mean against standard deviation for the light curves
-        of all sources with ids as given.
-        If none are given, do it for all sources.
+        Calculate the statistics of each light curve and store
+        in the object.
 
         Note: No sigma-clipping is done (yet).
 
@@ -76,6 +101,9 @@ class DataAnalyser:
         source_medians: numpy array (float64)
             Medians of all sources given.
 
+        n_positive: numpy array
+            Number of positive counts in the light curve
+
         """
         
         ## Make empty arrays
@@ -84,7 +112,6 @@ class DataAnalyser:
         source_stds    = np.zeros(self.n_sources)
         n_positives    = np.zeros(self.n_sources)
 
-        ## TODO: loop better
         ## For each source
         for i, path, source_id in Utilities.loop_variables(self.config, \
                 self.source_ids, adjusted=self.adjusted):
@@ -103,7 +130,7 @@ class DataAnalyser:
                 source_medians[i] = np.median(lc['counts'])
                 n_positives[i]    = len(np.where(lc['counts'] > 0)[0])
                                                    
-                ### TODO: Value checking
+                ### TODO: Value checking, do somewhere else
                 #value = std/mean
                 #if value > 0 and value < 2: #and mean > 0.02 and mean < 80:
                 #    self.stds.append(value)
@@ -119,10 +146,12 @@ class DataAnalyser:
 
 
 
+    ## TODO: Allow overplotting of variables
     def plot_means_and_stds(self):
         """
-        Plot means against standard deviations of each source.
-        Overplotted in red are the stars deemed variable.
+        Plot the mean against standard deviation for the light curves
+        of all sources with ids as given.
+        If none are given, do it for all sources.
 
         Parameters
         ----------
@@ -131,8 +160,6 @@ class DataAnalyser:
             Has light curve been divided by average?
 
         """
-
-        #plt.figure(figsize=(16, 10))
 
         plt.scatter(
                 self.source_means,
@@ -146,10 +173,7 @@ class DataAnalyser:
         plt.title("Mean against standard deviation for all sources in field {}"
                 .format(self.config.image_prefix))
         
-        #ensure plot y axis starts from 0
-        #plt.gca().set_ylim(bottom=1e-9)
-        #plt.xlim(self.means[len(self.means)-1] * 1.3, self.means[0] * 0.7)
-        
+
         if self.adjusted:
             fname = "std_dev_mean_adjusted{}".format(self.config.plot_file_extension)
         else:
@@ -185,6 +209,13 @@ class DataAnalyser:
 
         Assumes already have variable candidates
         Always adjusted=False
+
+        Parameters
+        ----------
+
+        exclude_ids: numpy array
+            IDs of all the sources which we should also avoid.
+            Usually given by the prototype variable finder.
 
         Returns
         -------
@@ -258,8 +289,6 @@ class DataAnalyser:
             fluxes = curve['counts']
             errs = curve['counts_err']
 
-            #print("Source id: {}; {}, {}".format(source_id, np.min(fluxes), np.max(fluxes)))
-
             ## Normalise each curve to ~1
             ## Median may be better if we have huge outliers/clouds?
             #source_mean = np.mean(fluxes)
@@ -274,6 +303,9 @@ class DataAnalyser:
                 errs /= source_median
                 total_counts += fluxes
                 total_vars += errs*errs
+            else:
+                print("[DataAnalyser] Error: Encountered non-positive median when creating \
+                        an average light curve")
 
             
         
@@ -281,7 +313,7 @@ class DataAnalyser:
         mean_counts = total_counts/n_measures
         mean_err = np.sqrt(total_vars)/n_measures
 
-        ## TODO: Proper sigma clipping
+        ## TODO: Error checking, this shouldn't trigger
         delete_idx = np.where(mean_err>1)[0]
         mean_counts[delete_idx] = 0
 
@@ -295,20 +327,39 @@ class DataAnalyser:
     ## TODO: Move me
     def output_results(self, variable_ids, vd):
         """
-        Save the table of variable stars, in order of decreasing variability
+        Save the table of variable stars.
+
+        Parameters
+        ----------
+
+        variable_ids: numpy array
+            IDs of all the sources deemed variable.
+
+        vd: VariableDetector
+            Variable detector object associated with this data analyser object
+
+        Results
+        -------
+
+        results_table: numpy array
+            Numpy array containing all details of the sources.
+            Same object that is written to disk.
 
         """
         
         #a = [self.results_table['variability'], self.results_table['id'], self.results_table['xcentroid'], self.results_table['ycentroid'], self.results_table['RA'], self.results_table['DEC']]
         
         cat = Utilities.read_catalogue(self.config)
-        #indices = np.where(cat['id'] == self.variable_ids)
+
+        ## Find out where the variables are in the catalogue
         _intersect, indices, _indices2 = np.intersect1d(cat['id'], variable_ids,
                 return_indices=True, assume_unique=True)
 
+        ## Columns of the results table
         t = [('id', 'int64'),
             ('variability_score', 'float64'),
             ('amplitude_score', 'float64'),
+            ('flux', 'float64'),
             ('xcentroid', 'float64'),
             ('ycentroid', 'float64'),
             ('RA', 'float64'),
@@ -316,16 +367,19 @@ class DataAnalyser:
 
         n_variables = len(variable_ids)
 
+        ## Retrieve the scores of each variable
+        ## TODO: breaks if you don't do both searches. Only one should be valid enough
         variability_score, amplitude_score = vd.get_scores(variable_ids)
 
         ## Build the results table
-        ## Wanted to do it better with numpy but it's hard to name 
-        ## the columns
+        ## j is index of source in results table
+        ## idx is index of source in catalogue
         results = np.empty(n_variables, dtype=t)
         for j, idx in enumerate(indices):
             results['id'][j] = cat['id'][idx]
             results['variability_score'][j] = variability_score[j]
             results['amplitude_score'][j] = amplitude_score[j]
+            results['flux'][j] = cat['flux'][idx]
             results['xcentroid'][j] = cat['xcentroid'][idx]
             results['ycentroid'][j] = cat['ycentroid'][idx]
             results['RA'][j] = cat['RA'][idx]
@@ -335,13 +389,11 @@ class DataAnalyser:
         results_fname = "{}_results{}".format(self.config.image_prefix, self.config.standard_file_extension)
         results_path = os.path.join(self.config.output_dir, results_fname)
 
-        #np.savetxt(results_path, results)
-        np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f %.10f')
+        np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f %.10f %.10f')
 
         #Utilities.make_reg_file(self.config.output_dir,
         #        self.config.image_prefix + "_variables", self.results_table)
 
-        #self.results_table = results
         return results
 
 
