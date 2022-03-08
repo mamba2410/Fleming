@@ -3,6 +3,7 @@ from pipeline import DataAnalyser, Utilities, VariableDetector
 
 from datetime import datetime
 import os
+import numpy as np
 
 HOME = os.path.expanduser("~")
 
@@ -137,7 +138,8 @@ def run_existing(config, n_sources, start_time,
 
     variable_ids_s = vd.std_dev_search(config.variability_threshold)
     variable_ids_a = vd.amplitude_search(config.amplitude_score_threshold)
-    variable_ids = variable_ids_a
+
+    variable_ids = np.unique(np.concatenate((variable_ids_a, variable_ids_s)))
 
     post_time = Utilities.finished_job("post-adjustment", adjustment_time)
 

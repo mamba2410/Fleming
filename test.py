@@ -1,5 +1,5 @@
 import pipeline
-from pipeline import *
+from pipeline import Pipeline, Config, Cataloguer, Utilities, PeriodFinder
 
 from datetime import datetime
 import os
@@ -15,7 +15,8 @@ def main():
     """
 
     config = Config(
-        #raw_image_dir = os.path.expanduser("~/mnt/uni/tmp_moving/0301"), raw_image_dir = os.path.expanduser("~/mnt/jgt/2022/0301"),
+        #raw_image_dir = os.path.expanduser("~/mnt/uni/tmp_moving/0301"),
+        #raw_image_dir = os.path.expanduser("~/mnt/jgt/2022/0301"),
         image_prefix = "l138_0",
         n_sets = 9,
         bias_prefix = "bias",
@@ -26,7 +27,19 @@ def main():
         amplitude_score_threshold = 0.85,
     )
 
-    Pipeline.run(config)
+    start_time = datetime.now()
+
+    c = Cataloguer(config)
+    catalogue_set_number = 1
+    catalogue_image_number = 1
+    catalogue_image_path = os.path.join(config.image_dir,
+            config.image_format_str
+            .format(catalogue_set_number, catalogue_image_number))
+
+    n_sources = c.generate_catalogue(catalogue_image_path, solve=False)
+    cataloguer_time = Utilities.finished_job("cataloguing stars", start_time)
+
+    Pipeline.run_existing(config, n_sources, cataloguer_time)
 
 def setup():
     """
@@ -46,7 +59,7 @@ def setup():
     
 
 def post_processing():
-    config = Constants.Config(
+    config = Config(
             raw_image_dir = os.path.expanduser("~/mnt/jgt/2022/0301"),
             #image_prefix = "l138_0",
             #image_prefix = "l140_0",

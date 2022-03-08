@@ -131,6 +131,7 @@ class VariableDetector:
         
         
     ## TODO: move signal to noise calculation out of here
+    ## TODO: Make quality checks optional (for average )
     def std_dev_search(self, threshold):
         """
         Calculates the variability score of all stars in the catalogue
@@ -157,11 +158,11 @@ class VariableDetector:
                 self.config, self.source_ids, adjusted=self.adjusted):
 
             self.variable_scores[i] = self.get_variable_score(source_id)
-            lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
+            #lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
 
         signal_to_noise = self.medians/self.stds
         self.variable_mask = np.where(
-                (self.variable_scores > self.config.variability_threshold)
+                (self.variable_scores > threshold)
                 & (self.variable_scores < self.config.variability_max)
                 & (signal_to_noise > self.config.min_signal_to_noise)
                 # TODO: something with self.n_positives
@@ -175,7 +176,7 @@ class VariableDetector:
         print("[VariableDetector] std search: Found {} variables out of {} sources"
                 .format(len(variable_ids), self.n_sources))
 
-        return self.variable_ids_s
+        return variable_ids
 
 
     def amplitude_search(self, amplitude_score_threshold):
@@ -215,21 +216,31 @@ class VariableDetector:
 
             print("[VariableDetector] Finding period for source {}/{}".format(i, self.n_sources))
 
+            lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
+
             ## TODO: Make period range config variable
-            period_stats[i] = pf.period_search(
-                    source_id, path, n_samples=self.config.n_sample_periods)
+            #period_stats[i] = pf.period_search(
+            #        source_id, path, n_samples=self.config.n_sample_periods)
+            period_stats[i] = pf.period_search_curve(source_id, 
+                    lc['time'], lc['counts'], lc['counts_err'], n_samples=self.config.n_sample_periods)
             A = period_stats[i]['amplitude']
             A_err = period_stats[i]['amplitude_err']
 
             ## TODO: Use signal to noise or amplitude per std?
             #amplitude_score[i] = A/A_err
-            amplitude_score[i] = A/self.stds[i]
+            #amplitude_score[i] = A/self.stds[i]
+            if period_stats['period'][i] > 0:
+                main_period = A*np.sin(2*np.pi/period_stats['period'][i] * lc['time'] + period_stats['phi'][i]) + period_stats['offset'][i]
+                subtracted_curve = lc['counts'] - main_period
+                new_std = np.std(subtracted_curve)
+                amplitude_score[i] = self.stds[i]/new_std
+            else:
+                amplitude_score[i] = 0
 
         self.period_stats = period_stats
         self.amplitude_scores = amplitude_score
 
         variable_mask = np.where(amplitude_score > amplitude_score_threshold)[0]
-
         variable_ids = np.copy(self.source_ids[variable_mask])
         self.variable_ids_a = variable_ids
 

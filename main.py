@@ -46,37 +46,61 @@ def main():
     ## SX10 configs are too different to be able to be put into the same array
     field_details = [
             # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
-            #["~/mnt/jgt/2019/1028", "l135",         6,      "noflat",   "bias"],
-            #["~/mnt/jgt/2021/1210Trius", "l135_5",  4,      "dflat7",   "bias2"],
-            ["~/mnt/jgt/2022/0105", "l136",         9,      "dflat",    "bias2"],
-            #["~/mnt/jgt/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
-            #["~/mnt/jgt/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
-            #["~/mnt/jgt/2022/0124", "l137_5",       7,      "dflat",    "bias"],
-            #["~/mnt/jgt/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
-            #["~/mnt/jgt/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
-            #["~/mnt/jgt/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
-            #["~/mnt/jgt/2020/0212", "l141_5",       8,      "flat",     "bias2"],
-            ]
+            #["F:/2019/1028", "l135",         6,      "noflat",   "bias"],
+            #["F:/2021/1210Trius", "l135_5",  4,      "dflat7",   "bias2"],
+            #["F:/2022/0105", "l136",         9,      "dflat",    "bias2"],
+            #["F:/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
+            #["F:/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
+            #["F:/2022/0124", "l137_5",       7,      "dflat",    "bias"],
+            #["F:/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
+            #["F:/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
+            #["F:/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
+            ["F:/2020/0212", "l141_5",       8,      "flat",     "bias2"],
+    ]
 
     ## Run for all Nebulosity fields
     for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
 
         config = Config(
             raw_image_dir = os.path.expanduser(raw_image_dir),
-            image_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images"),
+            image_dir = os.path.expanduser("D:/tmp/jgt_images"),
             image_prefix = image_prefix,
             n_sets = n_sets,
             flat_prefix = flat_prefix,
             bias_prefix = bias_prefix,
+            amplitude_score_threshold = 2.0,
+            variability_threshold = 1.0,
         )
 
         Pipeline.run(config)
+        #Pipeline.run_existing(config, assume_already_adjusted=True)
 
 
     ## ===================================================
     ## SX10 fields
 
     ## TODO: Add l138_0 and others
+    field_details = [
+            # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
+            #["F:/2022/0301", "l138_0",         9,      "noflat",   "bias_end"],
+    ]
+
+    for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
+
+        config = Config(
+            raw_image_dir = os.path.expanduser(raw_image_dir),
+            image_dir = os.path.expanduser("D:/tmp/jgt_images"),
+            image_prefix = image_prefix,
+            n_sets = n_sets,
+            flat_prefix = flat_prefix,
+            bias_prefix = bias_prefix,
+            fits_extension = ".fits",
+            fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
+            has_filter_in_header = False,
+            amplitude_score_threshold = 2.0,
+        )
+
+        Pipeline.run(config)
 
     _ = Utilities.finished_job("all fields", start_time)
 
