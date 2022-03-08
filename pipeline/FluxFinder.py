@@ -272,6 +272,10 @@ class FluxFinder:
             #print("[FluxFinder] Making light curve for image: set {:1}; image: {:03}".format(s, i))
             
             source_table = self.find_fluxes(s, i)
+
+            ## TODO: Decide if using mean or median
+            #counts = source_table['residual_aperture_sum_median'][j]
+            counts = source_table['residual_aperture_sum_mean']
                             
             ## Iterate through each source in the table
             for j in range(self.n_sources):
@@ -285,12 +289,9 @@ class FluxFinder:
                 seconds_elapsed = dt_elapsed.seconds
                 
 
-                ## TODO: Decide if using mean or median
-                #counts = source_table['residual_aperture_sum_median'][j]
-                counts = source_table['residual_aperture_sum_mean'][j]
 
                 ## If counts has reasonable value
-                if counts > 0: 
+                if counts[j] > 0: 
                     light_curves[j][1][image_index] = float(counts[j])
                     light_curves[j][2][image_index] = float(source_table['counts_err'][j])
                 else:
