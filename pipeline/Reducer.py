@@ -38,6 +38,9 @@ class Reducer:
 
         """
 
+        self.bias_frames = []
+        self.flatfield_frames = []
+
         self.config = config
         self.image_filter = image_filter
         self.get_bias_and_flatfield()
