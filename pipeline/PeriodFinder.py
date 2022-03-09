@@ -137,6 +137,9 @@ class PeriodFinder:
         if idx_min == n_samples-1 or idx_min == 0:
             #return period_min, period_min_err, amplitude, amplitude_err, phi, B
             ## Return unphysical values
+            #print("[PeriodFinder] Error: Minimum chi2 is initially outside bounds for source {:04}"
+            #        .format(source_id))
+            self.plot_chi2(chi2, omegas, source_id, 0.0)
             return 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
 
 
@@ -179,6 +182,9 @@ class PeriodFinder:
 
             ## If we break here, we cropped too small
             if idx_min == n_samples-1 or idx_min == 0:
+                print("[PeriodFinder] Error: Minimum chi2 moved outside of region for source {:04}"
+                    .format(source_id))
+                self.plot_chi2(chi2_orig, omegas_orig, source_id, 0.0)
                 return 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
 
             omega_min = omegas[idx_min]
@@ -189,6 +195,10 @@ class PeriodFinder:
 
             iteration += 1
 
+        if iteration >= self.config.period_max_iterations:
+                print("[PeriodFinder] Error: Hit max iterations for source {:04}"
+                    .format(source_id))
+
 
         ## Assume we are good enough
 
@@ -198,6 +208,8 @@ class PeriodFinder:
         ## ie we have no good minimum
         if len(large_chi2) == 0:
             ## Return unphysical values
+            #print("[PeriodFinder] Debug: chi2 landscape too shallow for source {:04}"
+            #        .format(source_id))
             return 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
 
         idx_dchi2 = large_chi2[0]
@@ -225,7 +237,7 @@ class PeriodFinder:
                 period_min,
                 self.config.plot_file_extension
             )
-        plt.title("Overplot period of {:5f}s for source id{:04}".format(period_min, source_id))
+        plt.title("Overplot period of {:05.0f}s for source id{:04}".format(period_min, source_id))
         plt.xlabel("Time [s]")
         plt.ylabel("Normalised brightness [arb. u.]")
         plt.savefig(os.path.join(self.config.periods_dir, fname))
@@ -248,7 +260,17 @@ class PeriodFinder:
         phi = np.pi/2-np.arctan(S/C)
 
         ## Plot initial chi2 distribution
-        plt.plot(2*np.pi/omegas_orig, chi2_orig)
+        self.plot_chi2(chi2_orig, omegas_orig, source_id, period_min)
+
+
+        return period_min, period_min_err, amplitude, amplitude_err, phi, B
+
+    ## TODO: Docs
+    def plot_chi2(self, chi2, omegas, source_id, period_min):
+        """
+        """
+
+        plt.plot(2*np.pi/omegas, chi2)
         fname = "chi2_{}_{}{:04}_P{:05.0f}{}".format(
                 self.config.image_prefix,
                 self.config.identifier,
@@ -256,14 +278,11 @@ class PeriodFinder:
                 period_min,
                 self.config.plot_file_extension
             )
-        plt.title("$\chi^2$ plot for source {:04}, period {:5f}s".format(source_id, period_min))
+        plt.title("$\chi^2$ plot for source {:04}, period {:5.0f}s".format(source_id, period_min))
         plt.xlabel("Period [s]")
         plt.ylabel("$\chi^2$ [arb. u.]")
         plt.savefig(os.path.join(self.config.periods_dir, fname))
         plt.close()
-
-
-        return period_min, period_min_err, amplitude, amplitude_err, phi, B
 
 
 

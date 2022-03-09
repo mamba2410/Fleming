@@ -126,13 +126,14 @@ class VariableDetector:
         ## Median of standard deviations
         median_std = np.median(self.stds[llim:ulim])
         variable_score = self.stds[source_index]/median_std - 1
+        #print("[DEBUG] Source {:04}; {}/{}".format(source_id, self.stds[source_index], median_std))
 
         return variable_score
         
         
     ## TODO: move signal to noise calculation out of here
     ## TODO: Make quality checks optional (for average )
-    def std_dev_search(self, threshold, threshold_upper, min_snr):
+    def std_dev_search(self, threshold, threshold_upper, min_snr, min_positives):
         """
         Calculates the variability score of all stars in the catalogue
         then builds a list of source indexes which are deemed variable.
@@ -165,7 +166,7 @@ class VariableDetector:
                 (self.variable_scores > threshold)
                 & (self.variable_scores < threshold_upper)
                 & (signal_to_noise > min_snr)
-                # TODO: something with self.n_positives
+                & (self.n_positive > min_positives)
                 )[0]
 
 

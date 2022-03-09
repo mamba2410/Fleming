@@ -135,7 +135,7 @@ def run_existing(config, n_sources, start_time,
         da.plot_means_and_stds()
         
         vd = VariableDetector(config, source_ids, mean, std, med, n_positive, adjusted=False)
-        exclude_ids = vd.std_dev_search(config.avg_exclude_threshold, 1e4, 0)
+        exclude_ids = vd.std_dev_search(config.avg_exclude_threshold, 1e4, 0, 0)
         avg_ids = da.get_ids_for_avg(exclude_ids)
 
         da.make_avg_curve(avg_ids)
@@ -162,8 +162,9 @@ def run_existing(config, n_sources, start_time,
     vd = VariableDetector(config, source_ids, means_adj, stds_adj,
             medians_adj, n_positive_adj, adjusted=True)
 
+    n_measures = config.n_sets * config.set_size
     variable_ids_s = vd.std_dev_search(config.variability_threshold,
-            config.variability_max, config.min_signal_to_noise)
+            config.variability_max, config.min_signal_to_noise, n_measures)
     variable_ids_a = vd.amplitude_search(config.amplitude_score_threshold)
 
     variable_ids = np.unique(np.concatenate((variable_ids_a, variable_ids_s)))

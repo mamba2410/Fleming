@@ -81,9 +81,9 @@ class Config:
             fits_date_format    = "%Y-%m-%dT%H:%M:%S",
 
             avg_exclude_threshold   = 0.4,
-            variability_threshold   = 0.8,
-            variability_max         = 2,
-            amplitude_score_threshold = 0.85,
+            variability_threshold   = 1.2,
+            variability_max         = 5,
+            amplitude_score_threshold = 1.8,
             check_radius            = 5,
             cosmic_threshold        = 5,
             flux_cutoff             = 100,
@@ -97,9 +97,9 @@ class Config:
             counts_clip_threshold   = 3,
 
             period_chi2_range       = 3,
-            period_max_iterations   = 10,
-            period_width_adjustment = 1.5,
-            n_sample_periods        = 100,
+            period_max_iterations   = 20,
+            period_width_adjustment = 1.3,
+            n_sample_periods        = 500,
 
             image_width         = 2432,
             image_height        = 1616,
