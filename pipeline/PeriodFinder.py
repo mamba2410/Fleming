@@ -236,8 +236,8 @@ class PeriodFinder:
         ## Use inverse Hessian to get errors
         params, _H, H_inv = self.periodogram_fit_func(counts, time, errors, omega_min)
         B, C, S = params
-        C_err = H_inv[1,1]
-        S_err = H_inv[2,2]
+        C_err = np.sqrt(H_inv[1,1])
+        S_err = np.sqrt(H_inv[2,2])
         A = np.sqrt(C**2 + S**2)
 
         ## Amplitude and its error
