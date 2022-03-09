@@ -23,6 +23,32 @@ def run(config, show_plots=False, show_errors=False, solve_astrometry=True, skip
     _ = Utilities.finished_job("everything for {}".format(config.image_prefix), start_time)
 
 
+## Run only the variable detection for a single field
+## Assumes we already have shifts, times, light curves, adjusted light curves
+def run_analysis(config, show_plots=False, show_errors=False, assume_already_adjusted=True):
+    start_time = datetime.now()
+
+    c = Cataloguer(config)
+
+    catalogue_set_number = 1
+    catalogue_image_number = 1
+
+    catalogue_image_path = os.path.join(config.image_dir,
+            config.image_format_str
+            .format(catalogue_set_number, catalogue_image_number))
+
+    print("[Pipeline] Cataloguing image {}".format(catalogue_image_path))
+    n_sources = c.generate_catalogue(catalogue_image_path, solve=False, write_file=False)
+
+    cataloguer_time = Utilities.finished_job("cataloguing stars", start_time)
+
+    run_existing(config, n_sources, cataloguer_time,
+            show_plots=show_plots, show_errors=show_errors,
+            assume_already_adjusted=assume_already_adjusted)
+
+    _ = Utilities.finished_job("everything for {}".format(config.image_prefix), start_time)
+
+
 def images_to_light_curves(config, start_time, skip_existing_images=True, solve_astrometry=True):
 
     ## Reducer
