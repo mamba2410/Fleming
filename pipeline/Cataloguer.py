@@ -53,7 +53,7 @@ class Cataloguer:
         self.config = config
 
 
-    def generate_catalogue(self, image_path, solve=True):
+    def generate_catalogue(self, image_path, solve=True, write_file=True):
         """
         Generates a catalogue of all the stars in the given image.
         Catalogue location is defined in self.config.catalogue_prefix.
@@ -94,8 +94,9 @@ class Cataloguer:
         ## Add the RA and DEC for each star to the catalogue
         self.convert_to_ra_and_dec(image_path, sources, solve=solve)
         
-        ## Write the catalogue to the catalogue file
-        sources.write(self.config.catalogue_path, format=self.config.table_format, overwrite=True)
+        if write_file:
+            ## Write the catalogue to the catalogue file
+            sources.write(self.config.catalogue_path, format=self.config.table_format, overwrite=True)
 
         return self.n_sources
 
