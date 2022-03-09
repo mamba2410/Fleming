@@ -93,6 +93,8 @@ class Config:
             moving_obj_check_image  = 30,
             n_reference_stars       = 10,
             min_signal_to_noise     = 2,
+            n_clip_iterations       = 3,
+            counts_clip_threshold   = 3,
 
             period_chi2_range       = 3,
             period_max_iterations   = 10,
@@ -178,6 +180,8 @@ class Config:
         self.moving_obj_check_image = moving_obj_check_image
         self.n_reference_stars      = n_reference_stars
         self.min_signal_to_noise    = min_signal_to_noise
+        self.n_clip_iterations      = n_clip_iterations
+        self.counts_clip_threshold  = counts_clip_threshold
 
         self.period_chi2_range       = period_chi2_range
         self.period_max_iterations   = period_max_iterations  

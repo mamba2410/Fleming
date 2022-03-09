@@ -627,6 +627,17 @@ class FluxFinder:
             med = np.median(curve['counts'])
             curve['counts'] /= med
             curve['counts_err'] /= avg_curve['counts'] * med
+
+            ## Scuffed sigma clip
+            for _i in range(self.config.n_clip_iterations):
+                med = np.median(curve['counts'])
+                std = np.std(curve['counts'])
+                clip_idx = np.where(
+                        np.abs(curve['counts']-med) > std * self.config.counts_clip_threshold
+                    )[0]
+                curve['counts'][clip_idx] = med     ## TODO: What do we replace it with?
+                curve['counts_err'][clip_idx] = 1e9
+
             
             fname = self.config.source_format_str.format(source_id)
             out_path = os.path.join(self.config.adjusted_curve_dir, fname)
