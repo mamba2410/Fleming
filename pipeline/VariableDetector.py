@@ -132,7 +132,7 @@ class VariableDetector:
         
     ## TODO: move signal to noise calculation out of here
     ## TODO: Make quality checks optional (for average )
-    def std_dev_search(self, threshold):
+    def std_dev_search(self, threshold, threshold_upper, min_snr):
         """
         Calculates the variability score of all stars in the catalogue
         then builds a list of source indexes which are deemed variable.
@@ -163,8 +163,8 @@ class VariableDetector:
         signal_to_noise = self.medians/self.stds
         self.variable_mask = np.where(
                 (self.variable_scores > threshold)
-                & (self.variable_scores < self.config.variability_max)
-                & (signal_to_noise > self.config.min_signal_to_noise)
+                & (self.variable_scores < threshold_upper)
+                & (signal_to_noise > min_snr)
                 # TODO: something with self.n_positives
                 )[0]
 

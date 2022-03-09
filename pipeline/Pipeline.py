@@ -135,7 +135,7 @@ def run_existing(config, n_sources, start_time,
         da.plot_means_and_stds()
         
         vd = VariableDetector(config, source_ids, mean, std, med, n_positive, adjusted=False)
-        exclude_ids = vd.std_dev_search(config.avg_exclude_threshold)
+        exclude_ids = vd.std_dev_search(config.avg_exclude_threshold, 1e4, 0)
         avg_ids = da.get_ids_for_avg(exclude_ids)
 
         da.make_avg_curve(avg_ids)
@@ -162,7 +162,8 @@ def run_existing(config, n_sources, start_time,
     vd = VariableDetector(config, source_ids, means_adj, stds_adj,
             medians_adj, n_positive_adj, adjusted=True)
 
-    variable_ids_s = vd.std_dev_search(config.variability_threshold)
+    variable_ids_s = vd.std_dev_search(config.variability_threshold,
+            config.variability_max, config.min_signal_to_noise)
     variable_ids_a = vd.amplitude_search(config.amplitude_score_threshold)
 
     variable_ids = np.unique(np.concatenate((variable_ids_a, variable_ids_s)))
@@ -176,6 +177,8 @@ def run_existing(config, n_sources, start_time,
     print("[Pipeline] Outputting results")
     results_table = da.output_results(variable_ids, vd)
     ff.create_thumbnails(results_table)
+    print("[Pipeline] Variables found: total {}; std {}; amp {}"
+            .format(len(variable_ids), len(variable_ids_s), len(variable_ids_a)))
 
     output_time = Utilities.finished_job("outputting results", post_time)
     
