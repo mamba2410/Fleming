@@ -1,5 +1,6 @@
 import pipeline
 from pipeline import Pipeline, Config, Cataloguer, Utilities, PeriodFinder
+from pipeline import VariableDetector
 
 from datetime import datetime
 import os
@@ -14,32 +15,63 @@ def main():
 
     """
 
+    vt = 1.0
+    at = 2.0
+
     config = Config(
-        #raw_image_dir = os.path.expanduser("~/mnt/uni/tmp_moving/0301"),
-        #raw_image_dir = os.path.expanduser("~/mnt/jgt/2022/0301"),
+        image_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images/"),
+        fits_extension = ".fits",
         image_prefix = "l138_0",
         n_sets = 9,
-        bias_prefix = "bias",
-        fits_extension = ".fits",
-        fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
-        has_filter_in_header = False,
-        n_sample_periods = 100,
-        amplitude_score_threshold = 0.85,
+        variability_threshold = vt,
+        amplitude_score_threshold = at,
     )
 
-    start_time = datetime.now()
+    Pipeline.run_analysis(config, assume_already_adjusted=True)
 
-    c = Cataloguer(config)
-    catalogue_set_number = 1
-    catalogue_image_number = 1
-    catalogue_image_path = os.path.join(config.image_dir,
-            config.image_format_str
-            .format(catalogue_set_number, catalogue_image_number))
+    config = Config(
+        image_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images/"),
+        image_prefix = "l140",
+        n_sets = 7,
+        variability_threshold = vt,
+        amplitude_score_threshold = at,
+    )
 
-    n_sources = c.generate_catalogue(catalogue_image_path, solve=False)
-    cataloguer_time = Utilities.finished_job("cataloguing stars", start_time)
 
-    Pipeline.run_existing(config, n_sources, cataloguer_time)
+    Pipeline.run_analysis(config, assume_already_adjusted=True)
+
+    config = Config(
+        image_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images/"),
+        image_prefix = "l141_5",
+        n_sets = 8,
+        variability_threshold = vt0,
+        amplitude_score_threshold = at,
+    )
+
+    Pipeline.run_analysis(config, assume_already_adjusted=True)
+
+
+def main_amp_testing():
+    config = Config(
+        raw_image_dir = os.path.expanduser("~/mnt/jgt/2020/0212"),
+        image_dir = os.path.expanduser("~/mnt/data/jgt_images/"),
+        image_prefix = "l145_5",
+        n_sets = 8,
+    )
+
+    source_ids = [301]
+    n_sources = len(source_ids)
+    means = np.ones(n_sources)
+    stds = np.ones(n_sources)
+    medians = np.ones(n_sources)
+    n_positive = np.array([config.n_sets*config.set_size])
+
+    vd = VariableDetector(config, source_ids, means, stds, medians, n_positive, adjusted=True)
+    variable_ids = vd.amplitude_search(0.0)
+
+    print(variable_ids)
+
+
 
 def setup():
     """
@@ -50,8 +82,8 @@ def setup():
     print("[Setup] Removing results and light curves")
     try:
         shutil.rmtree("./workspace/results/")
-        shutil.rmtree("./workspace/rejects/")
-        shutil.rmtree("./workspace/adjusted_light_curves/")
+        #shutil.rmtree("./workspace/rejects/")
+        #shutil.rmtree("./workspace/adjusted_light_curves/")
         shutil.rmtree("./workspace/periods/")
     except:
         pass
@@ -104,4 +136,5 @@ def post_processing():
 if __name__ == "__main__":
     setup()
     main()
+    #main_amp_testing()
     #post_processing()

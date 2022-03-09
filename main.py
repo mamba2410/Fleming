@@ -46,16 +46,16 @@ def main():
     ## SX10 configs are too different to be able to be put into the same array
     field_details = [
             # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
-            #["F:/2019/1028", "l135",         6,      "noflat",   "bias"],
-            #["F:/2021/1210Trius", "l135_5",  4,      "dflat7",   "bias2"],
-            #["F:/2022/0105", "l136",         9,      "dflat",    "bias2"],
-            #["F:/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
-            #["F:/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
-            #["F:/2022/0124", "l137_5",       7,      "dflat",    "bias"],
-            #["F:/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
-            #["F:/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
-            #["F:/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
-            ["F:/2020/0212", "l141_5",       8,      "flat",     "bias2"],
+            #["~/mnt/jgt/2019/1028", "l135",         6,      "noflat",   "bias"],
+            #["~/mnt/jgt/2021/1210Trius", "l135_5",  4,      "dflat7",   "bias2"],
+            #["~/mnt/jgt/2022/0105", "l136",         9,      "dflat",    "bias2"],
+            #["~/mnt/jgt/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
+            #["~/mnt/jgt/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
+            #["~/mnt/jgt/2022/0124", "l137_5",       7,      "dflat",    "bias"],
+            ["~/mnt/jgt/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
+            #["~/mnt/jgt/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
+            #["~/mnt/jgt/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
+            ["~/mnt/jgt/2020/0212", "l141_5",       8,      "flat",     "bias2"],
     ]
 
     ## Run for all Nebulosity fields
@@ -63,17 +63,17 @@ def main():
 
         config = Config(
             raw_image_dir = os.path.expanduser(raw_image_dir),
-            image_dir = os.path.expanduser("D:/tmp/jgt_images"),
+            image_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images"),
             image_prefix = image_prefix,
             n_sets = n_sets,
             flat_prefix = flat_prefix,
             bias_prefix = bias_prefix,
-            amplitude_score_threshold = 2.0,
             variability_threshold = 1.0,
+            amplitude_score_threshold = 2.0,
         )
 
-        Pipeline.run(config)
-        #Pipeline.run_existing(config, assume_already_adjusted=True)
+        #Pipeline.run(config)
+        Pipeline.run_analysis(config, assume_already_adjusted=True)
 
 
     ## ===================================================
@@ -82,14 +82,14 @@ def main():
     ## TODO: Add l138_0 and others
     field_details = [
             # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
-            #["F:/2022/0301", "l138_0",         9,      "noflat",   "bias_end"],
+            ["~/mnt/jgt/2022/0301", "l138_0",         9,      "noflat",   "bias_end"],
     ]
 
     for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
 
         config = Config(
             raw_image_dir = os.path.expanduser(raw_image_dir),
-            image_dir = os.path.expanduser("D:/tmp/jgt_images"),
+            image_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images"),
             image_prefix = image_prefix,
             n_sets = n_sets,
             flat_prefix = flat_prefix,
@@ -97,10 +97,12 @@ def main():
             fits_extension = ".fits",
             fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
             has_filter_in_header = False,
+            variability_threshold = 1.0,
             amplitude_score_threshold = 2.0,
         )
 
-        Pipeline.run(config)
+        #Pipeline.run(config)
+        Pipeline.run_analysis(config, assume_already_adjusted=False)
 
     _ = Utilities.finished_job("all fields", start_time)
 
@@ -132,46 +134,50 @@ def rename():
 
     ## l141 first set
     base_path = os.path.expanduser("~/mnt/jgt/2020/0206Trius")
-    for i in range(1, 51):
-        os.rename(
-                os.path.join(base_path, "l141_{:03d}.fit".format(i)),
-                os.path.join(base_path, "l141_1_{:03d}.fit".format(i))
-        )
-
-    ## l140.5 -> l140_5
-    base_path = os.path.expanduser("~/mnt/jgt/2019/0221")
-    for s in range(1, 8):
+    if not os.path.exists(os.path.join(base_path, "l141_001.fit")):
         for i in range(1, 51):
             os.rename(
-                    os.path.join(base_path, "l140.5_{:1d}_{:03d}.fit".format(s, i)),
-                    os.path.join(base_path, "l140_5_{:1d}_{:03d}.fit".format(s, i))
+                    os.path.join(base_path, "l141_{:03d}.fit".format(i)),
+                    os.path.join(base_path, "l141_1_{:03d}.fit".format(i))
             )
+
+    ## l140.5 -> l140_5
+    bsase_path = os.path.expanduser("~/mnt/jgt/2019/0221")
+    if not os.path.exists(os.path.join(base_path, "l140.5_1_001.fit")):
+        for s in range(1, 8):
+            for i in range(1, 51):
+                os.rename(
+                        os.path.join(base_path, "l140.5_{:1d}_{:03d}.fit".format(s, i)),
+                        os.path.join(base_path, "l140_5_{:1d}_{:03d}.fit".format(s, i))
+                )
 
     ## L140 -> l140_0
     base_path = os.path.expanduser("~/mnt/jgt/2019/0218")
-    for s in range(1, 8):
-        for i in range(1, 51):
-            os.rename(
-                    os.path.join(base_path, "L140_{:1d}_{:03d}.fit".format(s, i)),
-                    os.path.join(base_path, "l140_0_{:1d}_{:03d}.fit".format(s, i))
-            )
+    if not os.path.exists(os.path.join(base_path, "L140_1_001.fit")):
+        for s in range(1, 8):
+            for i in range(1, 51):
+                os.rename(
+                        os.path.join(base_path, "L140_{:1d}_{:03d}.fit".format(s, i)),
+                        os.path.join(base_path, "l140_0_{:1d}_{:03d}.fit".format(s, i))
+                )
 
     ## Make l138_0 image numbers range from 1-50
-    base_path = os.path.expanduser("~/mnt/uni/tmp_moving/0301")
-    for i in range(40, 40+50):
-        os.rename(
-                os.path.join(base_path, "l138_0_1_{:03d}.fits".format(i)),
-                os.path.join(base_path, "l138_0_1_{:03d}.fits".format(i-39)),
-        )
+    base_path = os.path.expanduser("~/mnt/jgt/2022/0301")
+    if not os.path.exists(os.path.join(base_path, "l138_0_1_001.fits")):
+        for i in range(40, 40+50):
+            os.rename(
+                    os.path.join(base_path, "l138_0_1_{:03d}.fits".format(i)),
+                    os.path.join(base_path, "l138_0_1_{:03d}.fits".format(i-39)),
+            )
 
-    for i in range(51, 51+50):
-        os.rename(
-                os.path.join(base_path, "l138_0_3_{:03d}.fits".format(i)),
-                os.path.join(base_path, "l138_0_3_{:03d}.fits".format(i-50)),
-        )
+        for i in range(51, 51+50):
+            os.rename(
+                    os.path.join(base_path, "l138_0_3_{:03d}.fits".format(i)),
+                    os.path.join(base_path, "l138_0_3_{:03d}.fits".format(i-50)),
+            )
 
     print("[Main] Finished renaming")
 
 if __name__ == "__main__":
-    main()
     #rename()
+    main()
