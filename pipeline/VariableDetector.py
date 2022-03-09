@@ -124,8 +124,8 @@ class VariableDetector:
 
 
         ## Median of standard deviations
-        median_std = np.median(self.source_ids[llim:ulim])
-        variable_score = self.source_ids[source_index]/median_std - 1
+        median_std = np.median(self.stds[llim:ulim])
+        variable_score = self.stds[source_index]/median_std - 1
 
         return variable_score
         
