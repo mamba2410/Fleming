@@ -223,27 +223,6 @@ class PeriodFinder:
         period_min = 2*np.pi/omega_min
         period_min_err = (omega_min_err/omega_min) * period_min
 
-        ## Sine curve of found period
-        B, C, S = _params[idx_min]
-        attempted_fit = B + C*np.cos(omega_min*time) + S*np.sin(omega_min*time)
-
-        ## Plot light curve and overplot sine wave
-        plt.scatter(time, counts, marker="x")
-        plt.plot(time, attempted_fit, color="red")
-        fname = "compare_{}_{}{:04}_P{:05.0f}{}".format(
-                self.config.image_prefix,
-                self.config.identifier,
-                source_id,
-                period_min,
-                self.config.plot_file_extension
-            )
-        plt.title("Overplot period of {:05.0f}s for source id{:04}".format(period_min, source_id))
-        plt.xlabel("Time [s]")
-        plt.ylabel("Normalised brightness [arb. u.]")
-        plt.savefig(os.path.join(self.config.periods_dir, fname))
-        plt.close()
-
-
         ## Amplitude estimation and error
         ## Use inverse Hessian to get errors
         params, _H, H_inv = self.periodogram_fit_func(counts, time, errors, omega_min)
@@ -257,13 +236,47 @@ class PeriodFinder:
         amplitude = A
 
         ## Phase shift for a sin wave
-        phi = np.pi/2-np.arctan(S/C)
+        phi = np.arctan(C/S)
+
+        ## Correct for trig reasons
+        if S < 0:
+            phi = phi - np.pi
 
         ## Plot initial chi2 distribution
-        self.plot_chi2(chi2_orig, omegas_orig, source_id, period_min)
+        if self.config.plot_fit_chi2:
+            self.plot_chi2(chi2_orig, omegas_orig, source_id, period_min)
 
+        if self.config.plot_fit_comparison:
+            self.plot_fit(time, counts, A, P, phi, offset)
 
         return period_min, period_min_err, amplitude, amplitude_err, phi, B
+
+    ## TODO: Docs
+    def plot_fit(self, source_id, time, counts, A, P, phi, offset, plot_dir=None):
+
+        ## Sine curve of found period
+        attempted_fit = offset + A*np.sin(2*np.pi/P * time + phi)
+
+        ## Plot light curve and overplot sine wave
+        plt.scatter(time, counts, marker="x")
+        plt.plot(time, attempted_fit, color="red")
+        fname = "compare_{}_{}{:04}_P{:05.0f}{}".format(
+                self.config.image_prefix,
+                self.config.identifier,
+                source_id,
+                P,
+                self.config.plot_file_extension
+            )
+
+        plt.title("Overplot period of {:05.0f}s for source id{:04}".format(P, source_id))
+        plt.xlabel("Time [s]")
+        plt.ylabel("Normalised brightness [arb. u.]")
+        if plot_dir == None:
+            plt.savefig(os.path.join(self.config.periods_dir, fname))
+        else:
+            plt.savefig(os.path.join(plot_dir, fname))
+            
+        plt.close()
 
     ## TODO: Docs
     def plot_chi2(self, chi2, omegas, source_id, period_min):

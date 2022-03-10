@@ -241,16 +241,23 @@ class VariableDetector:
 
             ## TODO: Use signal to noise or amplitude per std?
             #amplitude_score[i] = A/A_err
-            #amplitude_score[i] = A/self.stds[i]
+            amplitude_score[i] = A/self.stds[i]
 
-            if period_stats['period'][i] > 0:
-                main_period = A*np.sin(2*np.pi/period_stats['period'][i] * lc['time']
-                        + period_stats['phi'][i]) + period_stats['offset'][i]
-                new_std = np.std(lc['counts'] - main_period)
-                amplitude_score[i] = self.stds[i]/new_std
+            #if period_stats['period'][i] > 0:
+            #    main_period = A*np.sin(2*np.pi/period_stats['period'][i] * lc['time']
+            #            + period_stats['phi'][i]) + period_stats['offset'][i]
+            #    new_std = np.std(lc['counts'] - main_period)
+            #    amplitude_score[i] = self.stds[i]/new_std
 
-            else:
-                amplitude_score[i] = 0
+            #else:
+            #    amplitude_score[i] = 0
+
+            #if period_stats[i]['period'] > 0:
+            #    pf.plot_fit(source_id,
+            #        lc['time'], lc['counts'],
+            #        A, period_stats[i]['period'],
+            #        period_stats[i]['phi'], period_stats[i]['offset'],
+            #        plot_dir = self.config.testing_dir)
 
         self.period_stats = period_stats
         self.amplitude_scores = amplitude_score

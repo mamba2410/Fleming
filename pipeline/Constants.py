@@ -101,6 +101,8 @@ class Config:
             period_max_iterations   = 20,
             period_width_adjustment = 1.3,
             n_sample_periods        = 500,
+            plot_fit_chi2           = False,
+            plot_fit_comparison     = False,
 
             image_width         = 2432,
             image_height        = 1616,
@@ -185,6 +187,8 @@ class Config:
         self.n_clip_iterations      = n_clip_iterations
         self.counts_clip_threshold  = counts_clip_threshold
 
+        self.plot_fit_chi2           = plot_fit_chi2
+        self.plot_fit_comparison     = plot_fit_comparison
         self.period_chi2_range       = period_chi2_range
         self.period_max_iterations   = period_max_iterations  
         self.period_width_adjustment = period_width_adjustment
