@@ -2,6 +2,8 @@ from . import PeriodFinder, Utilities, Config
 
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 class VariableDetector:
     """
     VariableDetector class.
@@ -111,7 +113,13 @@ class VariableDetector:
 
         """
         
-        source_index = np.where(self.source_ids == source_id)[0][0]
+        source_index = np.where(self.source_ids == source_id)[0]
+
+        ## Check if we found our source in the IDs
+        if len(source_index) > 0:
+            source_index = source_index[0]
+        else:
+            return -1.0
        
         llim = source_index - self.config.check_radius
         ulim = source_index + self.config.check_radius + 1
@@ -119,8 +127,8 @@ class VariableDetector:
         if llim < 0:
             llim = 0
         
-        if ulim > self.n_sources:
-            ulim = self.n_sources
+        if ulim >= self.n_sources:
+            ulim = self.n_sources-1
 
 
         ## Median of standard deviations
@@ -162,15 +170,21 @@ class VariableDetector:
             #lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
 
         signal_to_noise = self.medians/self.stds
-        self.variable_mask = np.where(
+        variable_mask = np.where(
                 (self.variable_scores > threshold)
                 & (self.variable_scores < threshold_upper)
                 & (signal_to_noise > min_snr)
                 & (self.n_positive > min_positives)
                 )[0]
 
+        self.variable_mask = variable_mask
 
-        variable_ids = np.copy(self.source_ids[self.variable_mask])
+
+        if len(variable_mask) > 0:
+            variable_ids = np.copy(self.source_ids[self.variable_mask])
+        else:
+            variable_ids = np.array([])
+
         self.variable_ids_s = variable_ids
         
 
@@ -220,8 +234,6 @@ class VariableDetector:
             lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
 
             ## TODO: Make period range config variable
-            #period_stats[i] = pf.period_search(
-            #        source_id, path, n_samples=self.config.n_sample_periods)
             period_stats[i] = pf.period_search_curve(source_id, 
                     lc['time'], lc['counts'], lc['counts_err'], n_samples=self.config.n_sample_periods)
             A = period_stats[i]['amplitude']
@@ -230,11 +242,13 @@ class VariableDetector:
             ## TODO: Use signal to noise or amplitude per std?
             #amplitude_score[i] = A/A_err
             #amplitude_score[i] = A/self.stds[i]
+
             if period_stats['period'][i] > 0:
-                main_period = A*np.sin(2*np.pi/period_stats['period'][i] * lc['time'] + period_stats['phi'][i]) + period_stats['offset'][i]
-                subtracted_curve = lc['counts'] - main_period
-                new_std = np.std(subtracted_curve)
+                main_period = A*np.sin(2*np.pi/period_stats['period'][i] * lc['time']
+                        + period_stats['phi'][i]) + period_stats['offset'][i]
+                new_std = np.std(lc['counts'] - main_period)
                 amplitude_score[i] = self.stds[i]/new_std
+
             else:
                 amplitude_score[i] = 0
 
@@ -242,7 +256,13 @@ class VariableDetector:
         self.amplitude_scores = amplitude_score
 
         variable_mask = np.where(amplitude_score > amplitude_score_threshold)[0]
-        variable_ids = np.copy(self.source_ids[variable_mask])
+
+        if len(variable_mask) == 1:
+            variable_mask = variable_mask[0]
+            variable_ids = np.array([self.source_ids[variable_mask]])
+        else:
+            variable_ids = np.copy(self.source_ids[variable_mask])
+
         self.variable_ids_a = variable_ids
 
         print("[VariableDetector] amplitude search: Found {} variables out of {} sources"
