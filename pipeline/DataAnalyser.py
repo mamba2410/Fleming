@@ -329,7 +329,7 @@ class DataAnalyser:
 
         
     ## TODO: Move me
-    def output_results(self, variable_ids, vd):
+    def output_results(self, variable_ids, vd, out_dir=None):
         """
         Save the table of variable stars.
 
@@ -391,7 +391,10 @@ class DataAnalyser:
 
 
         results_fname = "{}_results{}".format(self.config.image_prefix, self.config.standard_file_extension)
-        results_path = os.path.join(self.config.output_dir, results_fname)
+        if out_dir == None:
+            results_path = os.path.join(self.config.output_dir, results_fname)
+        else:
+            results_path = os.path.join(out_dir, results_fname)
 
         np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f %.10f %.10f')
 
