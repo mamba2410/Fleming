@@ -52,11 +52,14 @@ def main():
             #["~/mnt/jgt/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
             #["~/mnt/jgt/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
             #["~/mnt/jgt/2022/0124", "l137_5",       7,      "dflat",    "bias"],
-            ["~/mnt/jgt/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
+            #["~/mnt/jgt/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
             #["~/mnt/jgt/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
             #["~/mnt/jgt/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
             ["~/mnt/jgt/2020/0212", "l141_5",       8,      "flat",     "bias2"],
     ]
+
+    vt = 1.3
+    at = 2.0
 
     ## Run for all Nebulosity fields
     for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
@@ -68,8 +71,8 @@ def main():
             n_sets = n_sets,
             flat_prefix = flat_prefix,
             bias_prefix = bias_prefix,
-            variability_threshold = 1.0,
-            amplitude_score_threshold = 2.0,
+            variability_threshold = vt,
+            amplitude_score_threshold = at,
         )
 
         #Pipeline.run(config)
@@ -82,7 +85,7 @@ def main():
     ## TODO: Add l138_0 and others
     field_details = [
             # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
-            ["~/mnt/jgt/2022/0301", "l138_0",         9,      "noflat",   "bias_end"],
+            #["~/mnt/jgt/2022/0301", "l138_0",         9,      "noflat",   "bias_end"],
     ]
 
     for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
@@ -97,12 +100,12 @@ def main():
             fits_extension = ".fits",
             fits_date_format = "%Y.%m.%dT%H:%M:%S.%f",
             has_filter_in_header = False,
-            variability_threshold = 1.0,
-            amplitude_score_threshold = 2.0,
+            variability_threshold = vt,
+            amplitude_score_threshold = at,
         )
 
         #Pipeline.run(config)
-        Pipeline.run_analysis(config, assume_already_adjusted=False)
+        Pipeline.run_analysis(config, assume_already_adjusted=True)
 
     _ = Utilities.finished_job("all fields", start_time)
 

@@ -168,6 +168,7 @@ def run_existing(config, n_sources, start_time,
     variable_ids_a = vd.amplitude_search(config.amplitude_score_threshold)
 
     variable_ids = np.unique(np.concatenate((variable_ids_a, variable_ids_s)))
+    #variable_ids = variable_ids_a
 
     post_time = Utilities.finished_job("post-adjustment", adjustment_time)
 
@@ -177,6 +178,7 @@ def run_existing(config, n_sources, start_time,
 
     print("[Pipeline] Outputting results")
     results_table = da.output_results(variable_ids, vd)
+    #results_table = da.output_results(source_ids, vd)
     ff.create_thumbnails(results_table)
     print("[Pipeline] Variables found: total {}; std {}; amp {}"
             .format(len(variable_ids), len(variable_ids_s), len(variable_ids_a)))
