@@ -57,6 +57,7 @@ class Config:
             moving_obj_subdir   = "moving_objects",
             rejects_subdir      = "rejects",
             periods_subdir      = "periods",
+            testing_subdir      = "testing",
 
             id_map_fname        = "id_mapper",
             moving_obj_fname    = "moving_obj",
@@ -138,6 +139,7 @@ class Config:
         self.moving_obj_dir         = os.path.join(self.workspace_dir, moving_obj_subdir)
         self.rejects_dir            = os.path.join(self.workspace_dir, rejects_subdir)
         self.periods_dir            = os.path.join(self.workspace_dir, periods_subdir)
+        self.testing_dir            = os.path.join(self.workspace_dir, testing_subdir)
 
         fname = "{}{}{}".format(time_prefix, image_prefix, standard_file_extension)
         self.time_path              = os.path.join(self.workspace_dir, fname)
@@ -273,4 +275,6 @@ class Config:
         if not os.path.exists(self.periods_dir):
             os.mkdir(self.periods_dir)
 
+        if not os.path.exists(self.testing_dir):
+            os.mkdir(self.testing_dir)
 
