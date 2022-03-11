@@ -360,7 +360,10 @@ class FluxFinder:
 
         """
 
-        print("[FluxFinder] Plotting light curve for source {} (adjusted={})"
+        if source_id == None:
+            print("[FluxFinder] Plotting average light curve")
+        else:
+            print("[FluxFinder] Plotting light curve for source {:04} (adjusted={})"
                 .format(source_id, adjusted))
 
         

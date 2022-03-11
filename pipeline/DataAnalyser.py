@@ -72,7 +72,7 @@ class DataAnalyser:
 
         ## Sort our sources in order of brightness
         brightness_indices = np.flip(np.argsort(cat['flux']))
-        self.source_ids = cat['id'][brightness_indices]
+        self.source_ids = np.array(cat['id'][brightness_indices], dtype='int')
 
         self.n_sources = len(self.source_ids)
 
