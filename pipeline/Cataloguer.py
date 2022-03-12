@@ -123,9 +123,10 @@ class Cataloguer:
         """
         
         to_remove = []
+        n_sources = len(sources)
                 
         ## Loop over each source
-        for i in range(self.n_sources):
+        for i in range(n_sources):
             
             ## Conditions to remove a source
             ## Note: is_within_boundaries does not account for later shifts
