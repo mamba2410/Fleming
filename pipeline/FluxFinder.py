@@ -378,7 +378,7 @@ class FluxFinder:
         ## Get the light curve data
         curve = np.genfromtxt(curve_path, dtype=self.config.light_curve_dtype).transpose()
         
-        times = curve['time']
+        times = curve['time']/3600
         fluxes = curve['counts']
         err = curve['counts_err']
         
@@ -400,7 +400,7 @@ class FluxFinder:
             plt.scatter(times, normalised_fluxes,
                     marker='.')
 
-        plt.xlabel("Time [seconds]")
+        plt.xlabel("Time [hours]")
         plt.ylabel("Relative flux [counts/mean]")
         
 
