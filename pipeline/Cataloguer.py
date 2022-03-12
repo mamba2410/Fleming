@@ -130,7 +130,8 @@ class Cataloguer:
             
             ## Conditions to remove a source
             ## Note: is_within_boundaries does not account for later shifts
-            is_too_bright = sources['flux'][i] > self.config.flux_cutoff
+            is_too_bright = sources['flux'][i] > self.config.max_flux_cutoff
+            is_too_dim = sources['flux'][i] < self.config.min_flux_cutoff
             is_within_boundaries = Utilities.is_within_boundaries(
                     sources['xcentroid'][i],
                     sources['ycentroid'][i],
@@ -138,7 +139,7 @@ class Cataloguer:
                     self.config.image_height,
                     self.config.edge_limit)
 
-            if is_too_bright or not is_within_boundaries:
+            if is_too_bright or is_too_dim or not is_within_boundaries:
                 to_remove.append(i)
         
 
