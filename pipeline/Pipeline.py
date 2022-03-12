@@ -175,6 +175,8 @@ def run_existing(config, n_sources, start_time,
     print("[Pipeline] Plotting variable curves")
     ff.plot_avg_light_curve(config.avg_curve_path, show=show_plots, show_errors=show_errors)
     ff.plot_given_light_curves(variable_ids, adjusted=True, show=show_plots, show_errors=show_errors)
+    #ff.plot_adjusted_comparison(variable_ids, plot_dir=config.testing_dir,
+    #        show=show_plots, show_errors=show_errors)
 
     print("[Pipeline] Outputting results")
     results_table = da.output_results(variable_ids, vd)

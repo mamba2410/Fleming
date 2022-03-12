@@ -183,7 +183,7 @@ class VariableDetector:
         if len(variable_mask) > 0:
             variable_ids = np.copy(self.source_ids[self.variable_mask])
         else:
-            variable_ids = np.array([])
+            variable_ids = np.array([], dtype='int')
 
         self.variable_ids_s = variable_ids
         

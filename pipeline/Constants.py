@@ -87,7 +87,8 @@ class Config:
             amplitude_score_threshold = 1.8,
             check_radius            = 5,
             cosmic_threshold        = 5,
-            flux_cutoff             = 100,
+            min_flux_cutoff         = 1.5,
+            max_flux_cutoff         = 100,
             edge_limit              = 50,
             inner_radius            = 8,
             outer_radius            = 13,
@@ -177,7 +178,8 @@ class Config:
         self.amplitude_score_threshold = amplitude_score_threshold
         self.check_radius           = check_radius
         self.cosmic_threshold       = cosmic_threshold
-        self.flux_cutoff            = flux_cutoff
+        self.min_flux_cutoff        = min_flux_cutoff
+        self.max_flux_cutoff        = max_flux_cutoff
         self.edge_limit             = edge_limit
         self.inner_radius           = inner_radius
         self.outer_radius           = outer_radius

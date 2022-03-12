@@ -4,7 +4,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from . import Utilities, Config, VariableDetector
+from . import Utilities, Config, VariableDetector, PeriodFinder
 
 class DataAnalyser:
     """
@@ -359,6 +359,12 @@ class DataAnalyser:
         _intersect, indices, _indices2 = np.intersect1d(cat['id'], variable_ids,
                 return_indices=True, assume_unique=True)
 
+        ## TODO: period stats are ordered in flux, so this gives wrong ones
+        Ps   = vd.period_stats['period'][indices]
+        As   = vd.period_stats['amplitude'][indices]
+        phis = vd.period_stats['phi'][indices]
+        offs = vd.period_stats['offset'][indices]
+
         ## Columns of the results table
         t = [('id', 'int64'),
             ('variability_score', 'float64'),
@@ -392,9 +398,17 @@ class DataAnalyser:
 
         results_fname = "{}_results{}".format(self.config.image_prefix, self.config.standard_file_extension)
         if out_dir == None:
-            results_path = os.path.join(self.config.output_dir, results_fname)
-        else:
-            results_path = os.path.join(out_dir, results_fname)
+            out_dir = self.config.output_dir
+
+        results_path = os.path.join(out_dir, results_fname)
+
+        pf = PeriodFinder(self.config)
+        for i, path, source_id in Utilities.loop_variables(self.config, variable_ids, adjusted=True):
+            lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
+            pf.plot_fit(source_id, lc['time'], lc['counts'],
+                    As[i], Ps[i], phis[i], offs[i],
+                    plot_dir=out_dir)
+
 
         np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f %.10f %.10f')
 
