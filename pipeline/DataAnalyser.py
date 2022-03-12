@@ -360,10 +360,11 @@ class DataAnalyser:
                 return_indices=True, assume_unique=True)
 
         ## TODO: period stats are ordered in flux, so this gives wrong ones
-        Ps   = vd.period_stats['period'][indices]
-        As   = vd.period_stats['amplitude'][indices]
-        phis = vd.period_stats['phi'][indices]
-        offs = vd.period_stats['offset'][indices]
+        period_stats = vd.get_period_stats(variable_ids)
+        Ps   = period_stats['period']
+        As   = period_stats['amplitude']
+        phis = period_stats['phi']
+        offs = period_stats['offset']
 
         ## Columns of the results table
         t = [('id', 'int64'),
@@ -373,7 +374,12 @@ class DataAnalyser:
             ('xcentroid', 'float64'),
             ('ycentroid', 'float64'),
             ('RA', 'float64'),
-            ('DEC', 'float64')]
+            ('DEC', 'float64'),
+            ('period', 'float64'),
+            ('period_err', 'float64'),
+            ('amplitude', 'float64'),
+            ('amplitude_err', 'float64'),
+            ]
 
         n_variables = len(variable_ids)
 
@@ -394,6 +400,10 @@ class DataAnalyser:
             results['ycentroid'][j] = cat['ycentroid'][idx]
             results['RA'][j] = cat['RA'][idx]
             results['DEC'][j] = cat['DEC'][idx]
+            results['period'][j] = Ps[j]
+            results['period_err'][j] = period_stats['period_err'][j]
+            results['amplitude'][j] = As[j]
+            results['amplitude_err'][j] = period_stats['amplitude_err'][j]
 
 
         results_fname = "{}_results{}".format(self.config.image_prefix, self.config.standard_file_extension)
@@ -404,13 +414,15 @@ class DataAnalyser:
 
         pf = PeriodFinder(self.config)
         for i, path, source_id in Utilities.loop_variables(self.config, variable_ids, adjusted=True):
-            lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
-            pf.plot_fit(source_id, lc['time'], lc['counts'],
-                    As[i], Ps[i], phis[i], offs[i],
-                    plot_dir=out_dir)
+            if Ps[i] > 0:
+                lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
+                pf.plot_fit(source_id, lc['time'], lc['counts'],
+                        As[i], Ps[i], phis[i], offs[i],
+                        plot_dir=out_dir)
 
 
-        np.savetxt(results_path, results, fmt='%04d %.10f %.10f %.10f %.10f %.10f %.10f %.10f')
+        fmt = "%04d" + " %.8f"*11
+        np.savetxt(results_path, results, fmt=fmt)
 
         #Utilities.make_reg_file(self.config.output_dir,
         #        self.config.image_prefix + "_variables", self.results_table)

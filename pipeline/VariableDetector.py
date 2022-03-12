@@ -326,6 +326,8 @@ class VariableDetector:
         else:
             _intersect, indices, _indices2 = np.intersect1d(self.source_ids, ids,
                 return_indices=True, assume_unique=True)
+            if len(indices) != len(ids):
+                print("[VariableDetector] Error: Couldn't find all IDs in variable detector")
             return self.period_stats[indices]
 
 
