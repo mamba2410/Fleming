@@ -42,27 +42,30 @@ def main():
     ## ===================================================
     ## Nebulosity fields
 
+    raw_base_dir = os.path.expanduser("~/mnt/jgt/")
+    img_base_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images")
+
     ## Details for fields taken with Nebulosity
     ## SX10 configs are too different to be able to be put into the same array
     field_details = [
             # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
-            #["F:/2019/1028", "l135",         6,      "noflat",   "bias"],
-            #["F:/2021/1210Trius", "l135_5",  4,      "dflat7",   "bias2"],
-            #["F:/2022/0105", "l136",         9,      "dflat",    "bias2"],
-            #["F:/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
-            #["F:/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
-            #["F:/2022/0124", "l137_5",       7,      "dflat",    "bias"],
-            #["F:/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
-            #["F:/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
-            #["F:/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
-            #["F:/2020/0212", "l141_5",       8,      "flat",     "bias2"],
-            ["F:/2019/0226", "l196",         7,      "noflat",     "bias_end"],
-            #["F:/2019/0225", "l196_5",       6,      "noflat",     "bias_end"],
-            #["F:/2019/0204", "l197",         7,      "noflat",     "Bias"],
-            #["F:/2019/0131", "l197.5",       9,      "noflat",     "biasend"],
-            #["F:/2019/0128", "l198",         7,      "noflat",     "bias_2"],
-            #["F:/2019/0129", "l198_5",       7,      "noflat",     "bias-1"],
-            #["F:/2019/0207", "l199",         7,      "noflat",     "Bias"],
+            #[raw_base_dir+"/2019/1028", "l135",         6,      "noflat",   "bias"],
+            #[raw_base_dir+"/2021/1210Trius", "l135_5",  4,      "dflat7",   "bias2"],
+            #[raw_base_dir+"/2022/0105", "l136",         9,      "dflat",    "bias2"],
+            #[raw_base_dir+"/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
+            #[raw_base_dir+"/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
+            #[raw_base_dir+"/2022/0124", "l137_5",       7,      "dflat",    "bias"],
+            #[raw_base_dir+"/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
+            #[raw_base_dir+"/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
+            #[raw_base_dir+"/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
+            #[raw_base_dir+"/2020/0212", "l141_5",       8,      "flat",     "bias2"],
+            #[raw_base_dir+"/2019/0226", "l196",         7,      "noflat",     "bias_end"],
+            #[raw_base_dir+"/2019/0225", "l196_5",       6,      "noflat",     "bias_end"],
+            #[raw_base_dir+"/2019/0204", "l197",         7,      "noflat",     "Bias"],
+            #[raw_base_dir+"/2019/0131", "l197.5",       9,      "noflat",     "biasend"],
+            #[raw_base_dir+"/2019/0128", "l198",         7,      "noflat",     "bias_2"],
+            #[raw_base_dir+"/2019/0129", "l198_5",       7,      "noflat",     "bias-1"],
+            #[raw_base_dir+"/2019/0207", "l199",         7,      "noflat",     "Bias"],
     ]
 
     vt = 1.3
@@ -73,8 +76,7 @@ def main():
 
         config = Config(
             raw_image_dir = os.path.expanduser(raw_image_dir),
-            #image_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images"),
-            image_dir = os.path.expanduser("D:/tmp/jgt_images"),
+            image_dir = os.path.expanduser(img_base_dir),
             image_prefix = image_prefix,
             n_sets = n_sets,
             flat_prefix = flat_prefix,
@@ -93,15 +95,14 @@ def main():
     ## TODO: Add l138_0 and others
     field_details = [
             # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
-            #["F:/2022/0301", "l138_0",         9,      "noflat",   "bias_end"],
+            #[raw_base_dir+"/2022/0301", "l138_0",         9,      "noflat",   "bias_end"],
     ]
 
     for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
 
         config = Config(
             raw_image_dir = os.path.expanduser(raw_image_dir),
-            #image_dir = os.path.expanduser("~/mnt/data/tmp/jgt_images"),
-            image_dir = os.path.expanduser("D:/tmp/jgt_images"),
+            image_dir = os.path.expanduser(img_base_dir),
             image_prefix = image_prefix,
             n_sets = n_sets,
             flat_prefix = flat_prefix,
