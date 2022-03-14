@@ -140,7 +140,7 @@ class PeriodFinder:
             #print("[PeriodFinder] Error: Minimum chi2 is initially outside bounds for source {:04}"
             #        .format(source_id))
             self.plot_chi2(chi2, omegas, source_id, 0.0)
-            return 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
+            return source_id, 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
 
 
         ## What's our changes like near the minimum?
@@ -185,7 +185,7 @@ class PeriodFinder:
                 print("[PeriodFinder] Error: Minimum chi2 moved outside of region for source {:04}"
                     .format(source_id))
                 self.plot_chi2(chi2_orig, omegas_orig, source_id, 0.0)
-                return 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
+                return source_id, 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
 
             omega_min = omegas[idx_min]
             chi2_min  = chi2[idx_min]
@@ -210,7 +210,7 @@ class PeriodFinder:
             ## Return unphysical values
             #print("[PeriodFinder] Debug: chi2 landscape too shallow for source {:04}"
             #        .format(source_id))
-            return 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
+            return source_id, 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
 
         idx_dchi2 = large_chi2[0]
         idx_dchi2 += idx_min
@@ -249,7 +249,9 @@ class PeriodFinder:
         if self.config.plot_fit_comparison:
             self.plot_fit(time, counts, A, P, phi, offset)
 
-        return period_min, period_min_err, amplitude, amplitude_err, phi, B
+        return source_id, period_min, period_min_err, amplitude, amplitude_err, phi, B
+
+
 
     ## TODO: Docs
     def plot_fit(self, source_id, time, counts, A, P, phi, offset, plot_dir=None, show=False):

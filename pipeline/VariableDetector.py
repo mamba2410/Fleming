@@ -218,6 +218,7 @@ class VariableDetector:
         amplitude_score = np.zeros(self.n_sources)
 
         period_stats = np.zeros(self.n_sources, dtype=[
+            ('id', 'int64'),
             ('period', 'float64'),
             ('period_err', 'float64'),
             ('amplitude', 'float64'),
@@ -324,8 +325,14 @@ class VariableDetector:
         if len(ids) == 0:
             return self.period_stats
         else:
-            _intersect, indices, _indices2 = np.intersect1d(self.source_ids, ids,
+            ## Sorts IDs in numerical order
+            intersect, indices, _indices2 = np.intersect1d(self.period_stats['id'], ids,
                 return_indices=True, assume_unique=True)
+
+            ## Need to 'unsort' to get bacl to  order of ids
+            unsort_indices = np.argsort(indices)
+            indices = indices[unsort_indices]
+
             if len(indices) != len(ids):
                 print("[VariableDetector] Error: Couldn't find all IDs in variable detector")
             return self.period_stats[indices]
