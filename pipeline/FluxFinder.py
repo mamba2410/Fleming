@@ -622,9 +622,10 @@ class FluxFinder:
         #for all files
         for i, path, source_id in Utilities.loop_variables(self.config, source_ids, adjusted=False):
             curve = np.genfromtxt(path, dtype=self.config.light_curve_dtype).transpose()
+            n_measures = len(curve['counts'])
 
-            if self.remove_cosmics(curve, stds[i]):
-                np.savetxt(path, curve)
+            ## Might not be needed since we're sigma clipping
+            self.remove_cosmics(curve, stds[i])
 
             curve['counts'] /= avg_curve['counts']
             med = np.median(curve['counts'])
@@ -638,7 +639,14 @@ class FluxFinder:
                 clip_idx = np.where(
                         np.abs(curve['counts']-med) > std * self.config.counts_clip_threshold
                     )[0]
-                curve['counts'][clip_idx] = med     ## TODO: What do we replace it with?
+                #curve['counts'][clip_idx] = med     ## TODO: What do we replace it with?
+                replace_idx = clip_idx + 1
+
+                broken_bounds = np.where(replace_idx >= n_measures-1)[0]
+                if len(broken_bounds) > 0:
+                    replace_idx[broken_bounds] = clip_idx[broken_bounds] - 1
+
+                curve['counts'][clip_idx] = curve['counts'][replace_idx]
                 curve['counts_err'][clip_idx] = 1e9
 
             
