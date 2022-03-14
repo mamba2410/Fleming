@@ -329,7 +329,7 @@ class DataAnalyser:
 
         
     ## TODO: Move me
-    def output_results(self, variable_ids, vd, out_dir=None):
+    def output_results(self, variable_ids, vd, out_dir=None, show=False):
         """
         Save the table of variable stars.
 
@@ -418,7 +418,8 @@ class DataAnalyser:
                 lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
                 pf.plot_fit(source_id, lc['time'], lc['counts'],
                         As[i], Ps[i], phis[i], offs[i],
-                        plot_dir=out_dir)
+                        plot_dir=out_dir,
+                        show=show)
 
 
         fmt = "%04d" + " %.8f"*11
