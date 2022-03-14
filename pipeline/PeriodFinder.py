@@ -252,7 +252,7 @@ class PeriodFinder:
         return period_min, period_min_err, amplitude, amplitude_err, phi, B
 
     ## TODO: Docs
-    def plot_fit(self, source_id, time, counts, A, P, phi, offset, plot_dir=None):
+    def plot_fit(self, source_id, time, counts, A, P, phi, offset, plot_dir=None, show=False):
 
         ## Sine curve of found period
         attempted_fit = offset + A*np.sin(2*np.pi/P * time + phi)
@@ -275,6 +275,9 @@ class PeriodFinder:
             plt.savefig(os.path.join(self.config.periods_dir, fname))
         else:
             plt.savefig(os.path.join(plot_dir, fname))
+
+        if show:
+            plt.show()
             
         plt.close()
 

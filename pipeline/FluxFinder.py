@@ -642,6 +642,7 @@ class FluxFinder:
                 #curve['counts'][clip_idx] = med     ## TODO: What do we replace it with?
                 replace_idx = clip_idx + 1
 
+                ## TODO: Useless if neighbour is also flagged as an outlier
                 broken_bounds = np.where(replace_idx >= n_measures-1)[0]
                 if len(broken_bounds) > 0:
                     replace_idx[broken_bounds] = clip_idx[broken_bounds] - 1
