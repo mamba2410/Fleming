@@ -244,6 +244,10 @@ class VariableDetector:
             #amplitude_score[i] = A/A_err
             amplitude_score[i] = A/self.stds[i]
 
+            ## TODO: Make config variable
+            if A > 5:
+                amplitude_score[i] = 0.0
+
             #if period_stats['period'][i] > 0:
             #    main_period = A*np.sin(2*np.pi/period_stats['period'][i] * lc['time']
             #            + period_stats['phi'][i]) + period_stats['offset'][i]
@@ -362,5 +366,55 @@ class VariableDetector:
             _intersect, indices, _indices2 = np.intersect1d(self.source_ids, ids,
                 return_indices=True, assume_unique=True)
             return self.variable_scores[indices], self.amplitude_scores[indices]
+
+    ## TODO: Docs
+    ## TODO: add check for zero-period
+    def filter_variables(self, variable_ids):
+        """
+        Remove variables which all have similar periods, amplitudes and phases.
+        This is likely due to field effects or something.
+        """
+
+        ## Get period stats in order of variable ids
+        period_stats = self.get_period_stats(variable_ids)
+
+        ## TODO: Make config variables
+        nbins_period = 5
+        nbins_phi = 10
+        nbins_amp = 40
+
+        hist_period, edge_period = np.histogram(period_stats['period'], bins=nbins_period)
+        largest = np.argmax(hist_period)
+        period_lower = edge_period[largest]
+        period_upper = edge_period[largest+1]
+        
+        hist_phi, edge_phi = np.histogram(period_stats['phi'], bins=nbins_phi)
+        largest = np.argmax(hist_phi)
+        phi_lower = edge_phi[largest]
+        phi_upper = edge_phi[largest+1]
+
+        hist_amp, edge_amp = np.histogram(period_stats['amplitude'], bins=nbins_amp)
+        largest = np.argmax(hist_amp)
+        amp_lower = edge_amp[largest]
+        amp_upper = edge_amp[largest+1]
+
+        remove_indices = []
+        for i, _path, source_id in Utilities.loop_variables(self.config, variable_ids):
+            similar_period = period_stats['period'][i] > period_lower \
+                    and period_stats['period'][i] < period_upper
+            similar_phi = period_stats['phi'][i] > phi_lower \
+                    and period_stats['phi'][i] < phi_upper
+            similar_amp = period_stats['amplitude'][i] > amp_lower \
+                    and period_stats['amplitude'][i] < amp_upper
+
+            ## Only similar amplitude and phase since 'fit' period can change a lot
+            if similar_amp and similar_phi:
+            #if similar_amp and similar_phi and similar_period:
+                remove_indices.append(i)
+
+        print("[VariableDetector] Filtered out {}/{} similar light curves"
+                .format(len(remove_indices), len(variable_ids)))
+        filtered_variable_ids = np.delete(variable_ids, remove_indices)
+        return filtered_variable_ids
 
 
