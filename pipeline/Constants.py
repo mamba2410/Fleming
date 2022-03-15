@@ -101,7 +101,7 @@ class Config:
 
             period_chi2_range       = 3,
             period_max_iterations   = 20,
-            period_width_adjustment = 1.3,
+            period_width_adjustment = 1.5,
             n_sample_periods        = 500,
             plot_fit_chi2           = False,
             plot_fit_comparison     = False,

@@ -63,8 +63,9 @@ class PeriodFinder:
 
     def period_search_curve(self, source_id,
             time, counts, errors,
-            period_min = 0.5*3600,
-            period_max = 6.0*3600,
+            #period_min = 0.5*3600,
+            period_min = 20.0*60,
+            period_max = 5.0*3600,
             n_samples  = 2000
             ):
         """
@@ -156,24 +157,25 @@ class PeriodFinder:
         ## Iterate until we can resolve the minimum of the landscape well
         ## we're aiming for a total change of chi from min to max ~1
         ## Set a max number of iterations just to be safe.
+        delta = 10*np.abs(omega_next - omega_min)
         iteration = 1
         while (np.max(chi2) - chi2_min) > self.config.period_chi2_range \
               and iteration < self.config.period_max_iterations:
 
             #print("[PeriodFinder] Iteration: {:02} for id {:04}".format(iteration, source_id))
 
-            ## Find an approximate gradient to guestimate width of next omega range
+            ## NOTE: Original idea, seems to be the best
+            ### Find an approximate gradient to guestimate width of next omega range
             approx_gradient = np.sqrt(chi2_next - chi2_min)/(omega_next - omega_min)
 
             ## Estimation of width we should use to better resolve the minimum
             approx_halfwidth = 1/approx_gradient
 
+            low_bound  = omega_min - self.config.period_width_adjustment*approx_halfwidth
+            high_bound = omega_min + self.config.period_width_adjustment*approx_halfwidth
+
             ## Create new omega range
-            omegas = np.linspace(
-                    omega_min - self.config.period_width_adjustment*approx_halfwidth,
-                    omega_min + self.config.period_width_adjustment*approx_halfwidth,
-                    int(n_samples)
-                )
+            omegas = np.linspace(low_bound, high_bound, int(n_samples))
 
             ## Next approximation, (hopefully) much closer to the minimum
             ## Need to get close enough to be able to approximate to a parabola
@@ -193,6 +195,7 @@ class PeriodFinder:
             omega_next = omegas[idx_min+1]
             chi2_next  = chi2[idx_min+1]
 
+            self.plot_chi2(chi2, omegas, source_id, iteration)
             iteration += 1
 
         if iteration >= self.config.period_max_iterations:
@@ -202,18 +205,36 @@ class PeriodFinder:
 
         ## Assume we are good enough
 
+        is_forwards = True
         large_chi2 = np.where(chi2[idx_min:] > chi2_min + 1)[0]
+        #large_chi2 = np.where(chi2 > chi2_min + 1)[0]
 
         ## If our delta chi2 never goes above 1
         ## ie we have no good minimum
+        ## NOTE: Errors are determined here
         if len(large_chi2) == 0:
-            ## Return unphysical values
-            #print("[PeriodFinder] Debug: chi2 landscape too shallow for source {:04}"
-            #        .format(source_id))
-            return source_id, 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
 
-        idx_dchi2 = large_chi2[0]
-        idx_dchi2 += idx_min
+            ## TODO: Maybe best to always only look backwards. Need testing.
+            ## Need to look backwards if the minimum is uneven and has
+            ## a shallower gradient in the +omega direction
+
+            ## If we can't find a forward point, look backwards
+            large_chi2 = np.where(chi2[:idx_min] > chi2_min + 1)[0]
+            is_forwards = False
+
+            if len(large_chi2) == 0:
+                ## Return unphysical values
+                print("[PeriodFinder] Debug: chi2 landscape too shallow for source {:04}"
+                        .format(source_id))
+                self.plot_chi2(chi2_orig, omegas_orig, source_id, 0.0)
+                self.plot_chi2(chi2, omegas, source_id, 1.0)
+                return source_id, 0.0, -1.0, 0.0, -1.0, -1.0, -1.0
+
+        if is_forwards:
+            idx_dchi2 = large_chi2[0]
+            idx_dchi2 += idx_min
+        else:
+            idx_dchi2 = large_chi2[-1]
         
         ## Uncertainty of omega is 1/sqrt(curvature at minimum)
         c = (chi2[idx_dchi2] - chi2_min)/(omegas[idx_dchi2] - omega_min)**2
