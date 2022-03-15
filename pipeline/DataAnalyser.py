@@ -354,10 +354,12 @@ class DataAnalyser:
         #a = [self.results_table['variability'], self.results_table['id'], self.results_table['xcentroid'], self.results_table['ycentroid'], self.results_table['RA'], self.results_table['DEC']]
         
         cat = Utilities.read_catalogue(self.config)
+        brightness_order = np.flip(np.argsort(cat['flux']))
+        cat = cat[brightness_order]
 
         ## Find out where the variables are in the catalogue
         _intersect, indices, _indices2 = np.intersect1d(cat['id'], variable_ids,
-                return_indices=True, assume_unique=True)
+                return_indices=True, assume_unique=False)
 
         ## TODO: period stats are ordered in flux, so this gives wrong ones
         period_stats = vd.get_period_stats(variable_ids)

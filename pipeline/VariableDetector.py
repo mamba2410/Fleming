@@ -330,7 +330,8 @@ class VariableDetector:
             return self.period_stats
         else:
             ## Sorts IDs in numerical order
-            intersect, indices, _indices2 = np.intersect1d(self.period_stats['id'], ids,
+            #intersect, indices, _indices2 = np.intersect1d(self.period_stats['id'], ids,
+            intersect, indices, _indices2 = np.intersect1d(self.source_ids, ids,
                 return_indices=True, assume_unique=True)
 
             ## Need to 'unsort' to get bacl to  order of ids
@@ -365,6 +366,11 @@ class VariableDetector:
         else:
             _intersect, indices, _indices2 = np.intersect1d(self.source_ids, ids,
                 return_indices=True, assume_unique=True)
+
+            ## Need to 'unsort' to get bacl to  order of ids
+            unsort_indices = np.argsort(indices)
+            indices = indices[unsort_indices]
+
             return self.variable_scores[indices], self.amplitude_scores[indices]
 
     ## TODO: Docs
