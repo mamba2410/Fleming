@@ -65,7 +65,7 @@ class PeriodFinder:
             time, counts, errors,
             period_min = 0.5*3600,
             period_max = 6.0*3600,
-            n_samples  = int(2e3)
+            n_samples  = 2000
             ):
         """
         Takes a source light curve and finds the most prominent period
@@ -254,24 +254,54 @@ class PeriodFinder:
 
 
     ## TODO: Docs
-    def plot_fit(self, source_id, time, counts, A, P, phi, offset, plot_dir=None, show=False):
+    def plot_fit(self, source_id, time_p, counts, A, P_p, phi, offset,
+            plot_dir=None, show=False, title=None, units="seconds"):
+
+        if units == "hours":
+            time = time_p/3600
+            P = P_p/3600
+            fname = "compare_{}_{}{:04}_P{:1.4f}h{}".format(
+                    self.config.image_prefix,
+                    self.config.identifier,
+                    source_id,
+                    P,
+                    self.config.plot_file_extension
+                )
+
+        elif units=="seconds":
+            time = time_p
+            P = P_p
+            fname = "compare_{}_{}{:04}_P{:05.0f}s{}".format(
+                    self.config.image_prefix,
+                    self.config.identifier,
+                    source_id,
+                    P,
+                    self.config.plot_file_extension
+                )
+        else:
+            print("[PeriodFinder] Error in plotting, units '{}' not recognised".format(units))
+            return
 
         ## Sine curve of found period
-        attempted_fit = offset + A*np.sin(2*np.pi/P * time + phi)
+        if P > 0:
+            attempted_fit = offset + A*np.sin(2*np.pi/P * time + phi)
+        else:
+            attempted_fit = np.ones(len(time)) * np.median(counts)
 
         ## Plot light curve and overplot sine wave
         plt.scatter(time, counts, marker="x")
         plt.plot(time, attempted_fit, color="red")
-        fname = "compare_{}_{}{:04}_P{:05.0f}{}".format(
-                self.config.image_prefix,
-                self.config.identifier,
-                source_id,
-                P,
-                self.config.plot_file_extension
-            )
 
-        plt.title("Overplot period of {:05.0f}s for source id{:04}".format(P, source_id))
-        plt.xlabel("Time [s]")
+
+        if title == None:
+            if units == "seconds":
+                plt.title("Overplot period of {:05.0f}s for source id{:04}".format(P, source_id))
+            elif units == "hours":
+                plt.title("Overplot period of {:1.4f}hours for source id{:04}".format(P, source_id))
+        else:
+            plt.title(title)
+
+        plt.xlabel("Time [{}]".format(units))
         plt.ylabel("Normalised brightness [arb. u.]")
         if plot_dir == None:
             plt.savefig(os.path.join(self.config.periods_dir, fname))

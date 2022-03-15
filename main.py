@@ -1,7 +1,8 @@
-from pipeline import Utilities, Pipeline, Config
+from pipeline import Utilities, Pipeline, Config, PeriodFinder
 
 from datetime import datetime
 import os
+import numpy as np
 
 def main():
     """
@@ -49,22 +50,22 @@ def main():
     ## SX10 configs are too different to be able to be put into the same array
     field_details = [
             # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
-            #[raw_base_dir+"/2019/1028", "l135",         6,      "noflat",   "bias"],
-            #[raw_base_dir+"/2021/1210Trius", "l135_5",  4,      "dflat7",   "bias2"],
-            #[raw_base_dir+"/2022/0105", "l136",         9,      "dflat",    "bias2"],
-            #[raw_base_dir+"/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
-            #[raw_base_dir+"/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
-            #[raw_base_dir+"/2022/0124", "l137_5",       7,      "dflat",    "bias"],
-            #[raw_base_dir+"/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
-            #[raw_base_dir+"/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
-            #[raw_base_dir+"/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
-            #[raw_base_dir+"/2020/0212", "l141_5",       8,      "flat",     "bias2"],
-            #[raw_base_dir+"/2019/0226", "l196",         7,      "noflat",     "bias_end"],
-            #[raw_base_dir+"/2019/0225", "l196_5",       6,      "noflat",     "bias_end"],
-            #[raw_base_dir+"/2019/0204", "l197",         7,      "noflat",     "Bias"],
-            #[raw_base_dir+"/2019/0131", "l197.5",       9,      "noflat",     "biasend"],
-            #[raw_base_dir+"/2019/0128", "l198",         7,      "noflat",     "bias_2"],
-            #[raw_base_dir+"/2019/0129", "l198_5",       7,      "noflat",     "bias-1"],
+            [raw_base_dir+"/2019/1028", "l135",         6,      "noflat",   "bias"],
+            [raw_base_dir+"/2021/1210Trius", "l135_5",  4,      "dflat7",   "bias2"],
+            [raw_base_dir+"/2022/0105", "l136",         9,      "dflat",    "bias2"],
+            [raw_base_dir+"/2022/0117", "l136_5",       7,      "dflat",    "bias4"],
+            [raw_base_dir+"/2022/0121", "l137_0",       7,      "dflat",    "bias_shutter"],
+            [raw_base_dir+"/2022/0124", "l137_5",       7,      "dflat",    "bias"],
+            [raw_base_dir+"/2019/0218", "l140_0",       7,      "noflat",   "BiasLast"],
+            [raw_base_dir+"/2019/0221", "l140_5",       7,      "noflat",   "Bias_end_"],
+            [raw_base_dir+"/2020/0206Trius", "l141",    7,      "flat",     "bias2"],
+            [raw_base_dir+"/2020/0212", "l141_5",       8,      "flat",     "bias2"],
+            [raw_base_dir+"/2019/0226", "l196",         7,      "noflat",     "bias_end"],
+            [raw_base_dir+"/2019/0225", "l196_5",       6,      "noflat",     "bias_end"],
+            [raw_base_dir+"/2019/0204", "l197",         7,      "noflat",     "Bias"],
+            [raw_base_dir+"/2019/0131", "l197.5",       9,      "noflat",     "biasend"],
+            [raw_base_dir+"/2019/0128", "l198",         7,      "noflat",     "bias_2"],
+            [raw_base_dir+"/2019/0129", "l198_5",       7,      "noflat",     "bias-1"],
             #[raw_base_dir+"/2019/0207", "l199",         7,      "noflat",     "Bias"],
     ]
 
@@ -86,7 +87,7 @@ def main():
         )
 
         #Pipeline.run(config)
-        Pipeline.run_analysis(config, assume_already_adjusted=True)
+        Pipeline.run_analysis(config, assume_already_adjusted=False)
 
 
     ## ===================================================
@@ -95,7 +96,7 @@ def main():
     ## TODO: Add l138_0 and others
     field_details = [
             # image_dir             image_prefix    n_sets  flat_prefix bias_prefix
-            #[raw_base_dir+"/2022/0301", "l138_0",         9,      "noflat",   "bias_end"],
+            [raw_base_dir+"/2022/0301", "l138_0",         9,      "noflat",   "bias_end"],
     ]
 
     for raw_image_dir, image_prefix, n_sets, flat_prefix, bias_prefix in field_details:
@@ -114,10 +115,79 @@ def main():
             amplitude_score_threshold = at,
         )
 
-        Pipeline.run(config)
-        #Pipeline.run_analysis(config, assume_already_adjusted=True)
+        #Pipeline.run(config)
+        Pipeline.run_analysis(config, assume_already_adjusted=False)
 
     _ = Utilities.finished_job("all fields", start_time)
+
+
+## TODO: Docs
+def hand_pick():
+    config = Config()
+
+    hand_picked = [
+        ["l135",   1005],
+        ["l136_5",  599],
+        ["l138_0", 1384],
+        ["l138_0", 1194],
+        ["l140_0",  760],
+        ["l141_5",  276],
+        ["l141_5",  448],
+        ["l196",    507],
+        ["l196",   1287],
+        ["l196",   1637],
+        ["l197.5", 1235],
+        ["l197",     98],
+        ["l197",    164],
+        ["l197",    371],
+        ["l197",    456],
+        ["l197",   1844],
+        ["l198",    482],
+        ["l198",   1577],
+    ]
+    n_variables = len(hand_picked)
+
+    fname = "results_dr2.txt"
+    final_results = open(os.path.join(config.hand_picked_dir, fname), "w")
+    final_results.write(
+            "RA [deg]\tDEC [deg]\tperiod [s]\tperiod error [s]\tamplitude [\%]\tamplitude error [\%]\n")
+
+    for field_id, source_id in hand_picked:
+        config = Config(
+            image_prefix = field_id,
+        )
+
+        print("[Main] Hand picking for {}, {}".format(field_id, source_id))
+
+        cat = Utilities.read_catalogue(config)
+        idx = np.where(cat['id'] == source_id)[0][0]
+        ra  = cat['RA'][idx]
+        dec = cat['DEC'][idx]
+
+        lc_path = os.path.join(config.adjusted_curve_dir,
+                config.source_format_str.format(source_id))
+        lc = np.genfromtxt(lc_path, dtype=config.light_curve_dtype)
+
+        pf = PeriodFinder(config)
+
+        _id, P, P_err, A, A_err, phi, offset = pf.period_search_curve(
+                source_id, lc['time'], lc['counts'], lc['counts_err'],
+                n_samples=2000)
+
+        title="Light curve and fitted plot for variable at RA={:.6}, DEC={:.6}".format(ra, dec)
+        #print(P, P_err, A, A_err, phi, offset)
+        pf.plot_fit(source_id, lc['time'], lc['counts'],
+                A, P, phi, offset,
+                plot_dir = config.hand_picked_dir,
+                title=title,
+                units="hours")
+
+        final_results.write("{}\t{}\t{}\t{}\t{}\t{}\n"
+                .format(ra, dec, P, P_err, A, A_err))
+
+
+
+    final_results.close()
 
 
 
@@ -219,5 +289,6 @@ def rename():
 
 if __name__ == "__main__":
     #rename()
-    main()
+    #main()
+    hand_pick()
 
