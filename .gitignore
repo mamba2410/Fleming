@@ -8,3 +8,4 @@ astrometry_api_key.txt
 candidates.md
 *_results.txt
 *.reg
+*.log
