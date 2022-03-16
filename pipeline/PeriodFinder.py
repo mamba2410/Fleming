@@ -180,6 +180,7 @@ class PeriodFinder:
             ## Next approximation, (hopefully) much closer to the minimum
             ## Need to get close enough to be able to approximate to a parabola
             _params, chi2 = self.search_omegas(counts, time, errors, omegas)
+            #self.plot_chi2(chi2, omegas, source_id, iteration)
             idx_min = np.argmin(chi2)
 
             ## If we break here, we cropped too small
@@ -195,7 +196,6 @@ class PeriodFinder:
             omega_next = omegas[idx_min+1]
             chi2_next  = chi2[idx_min+1]
 
-            self.plot_chi2(chi2, omegas, source_id, iteration)
             iteration += 1
 
         if iteration >= self.config.period_max_iterations:

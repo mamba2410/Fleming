@@ -353,13 +353,20 @@ class DataAnalyser:
         
         #a = [self.results_table['variability'], self.results_table['id'], self.results_table['xcentroid'], self.results_table['ycentroid'], self.results_table['RA'], self.results_table['DEC']]
         
+        variable_ids = np.sort(variable_ids)
         cat = Utilities.read_catalogue(self.config)
-        brightness_order = np.flip(np.argsort(cat['flux']))
-        cat = cat[brightness_order]
+        #brightness_order = np.flip(np.argsort(cat['flux']))
+        #cat = cat[brightness_order]
+        #print(cat['id'])
+        #print(variable_ids)
 
         ## Find out where the variables are in the catalogue
-        _intersect, indices, _indices2 = np.intersect1d(cat['id'], variable_ids,
-                return_indices=True, assume_unique=False)
+        #_intersect, indices, indices2 = np.intersect1d(cat['id'], variable_ids,
+        #        return_indices=True, assume_unique=False)
+        ##cat = cat[indices]
+        #sorted_indices = np.argsort(variable_ids[indices2])
+        #indices = indices[sorted_indices]
+
 
         ## TODO: period stats are ordered in flux, so this gives wrong ones
         period_stats = vd.get_period_stats(variable_ids)
@@ -393,19 +400,25 @@ class DataAnalyser:
         ## j is index of source in results table
         ## idx is index of source in catalogue
         results = np.empty(n_variables, dtype=t)
-        for j, idx in enumerate(indices):
-            results['id'][j] = cat['id'][idx]
-            results['variability_score'][j] = variability_score[j]
-            results['amplitude_score'][j] = amplitude_score[j]
-            results['flux'][j] = cat['flux'][idx]
-            results['xcentroid'][j] = cat['xcentroid'][idx]
-            results['ycentroid'][j] = cat['ycentroid'][idx]
-            results['RA'][j] = cat['RA'][idx]
-            results['DEC'][j] = cat['DEC'][idx]
-            results['period'][j] = Ps[j]
-            results['period_err'][j] = period_stats['period_err'][j]
-            results['amplitude'][j] = As[j]
-            results['amplitude_err'][j] = period_stats['amplitude_err'][j]
+        #for j, idx in enumerate(indices):
+        for j, source_id in enumerate(variable_ids):
+            p_idx = np.where(period_stats['id']==source_id) [0][0]
+            c_idx = np.where(cat['id']==source_id) [0][0]
+
+            #print("{}; {}".format(period_stats['id'][p_idx], cat['id'][c_idx]))
+            results['id'][j] = cat['id'][c_idx]
+            #results['id'][j] = period_stats['id']
+            results['variability_score'][j] = variability_score[p_idx]
+            results['amplitude_score'][j] = amplitude_score[p_idx]
+            results['flux'][j] = cat['flux'][c_idx]
+            results['xcentroid'][j] = cat['xcentroid'][c_idx]
+            results['ycentroid'][j] = cat['ycentroid'][c_idx]
+            results['RA'][j] = cat['RA'][c_idx]
+            results['DEC'][j] = cat['DEC'][c_idx]
+            results['period'][j] = Ps[p_idx]
+            results['period_err'][j] = period_stats['period_err'][p_idx]
+            results['amplitude'][j] = As[p_idx]
+            results['amplitude_err'][j] = period_stats['amplitude_err'][p_idx]
 
 
         results_fname = "{}_results{}".format(self.config.image_prefix, self.config.standard_file_extension)
@@ -416,10 +429,11 @@ class DataAnalyser:
 
         pf = PeriodFinder(self.config)
         for i, path, source_id in Utilities.loop_variables(self.config, variable_ids, adjusted=True):
-            if Ps[i] > 0:
+            p_idx = np.where(period_stats['id']==source_id) [0][0]
+            if Ps[p_idx] > 0:
                 lc = np.genfromtxt(path, dtype=self.config.light_curve_dtype)
                 pf.plot_fit(source_id, lc['time'], lc['counts'],
-                        As[i], Ps[i], phis[i], offs[i],
+                        As[p_idx], Ps[p_idx], phis[p_idx], offs[p_idx],
                         plot_dir=out_dir,
                         show=show)
 
