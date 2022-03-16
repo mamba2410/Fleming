@@ -63,12 +63,9 @@ def images_to_light_curves(config, start_time, skip_existing_images=True, solve_
     ## Creates a catalogue of stars found in the given image
     c = Cataloguer(config)
 
-    catalogue_set_number = 1
-    catalogue_image_number = 1
-
     catalogue_image_path = os.path.join(config.image_dir,
             config.image_format_str
-            .format(catalogue_set_number, catalogue_image_number))
+            .format(config.catalogue_set_number, config.catalogue_image_number))
 
     print("[Pipeline] Cataloguing image {}".format(catalogue_image_path))
     n_sources = c.generate_catalogue(catalogue_image_path, solve=solve_astrometry)
@@ -166,9 +163,9 @@ def run_existing(config, n_sources, start_time,
     variable_ids_s = vd.std_dev_search(config.variability_threshold,
             config.variability_max, config.min_signal_to_noise, n_measures)
     variable_ids_a = vd.amplitude_search(config.amplitude_score_threshold)
+    variable_ids_a = vd.filter_variables(variable_ids_a)
 
     variable_ids = np.unique(np.concatenate((variable_ids_a, variable_ids_s)))
-    #variable_ids = variable_ids_a
     #variable_ids = vd.filter_variables(variable_ids)
 
     post_time = Utilities.finished_job("post-adjustment", adjustment_time)

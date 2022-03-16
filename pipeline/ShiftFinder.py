@@ -171,9 +171,15 @@ class ShiftFinder:
             prev_x_shift = star_shifts[0][j] 
             prev_y_shift = star_shifts[1][j] 
 
-            print("[ShiftFinder] ...Shifts: {},{}".format(star_shifts[0][j], star_shifts[1][j]))
+            print("[ShiftFinder] ...Shifts: {:.4f},{:.4f}".format(star_shifts[0][j], star_shifts[1][j]))
             j += 1
 
+        ## Usually catalogue is first image, but we want
+        ## all shifts relative to any general catalogue image
+        catalogue_index = (self.config.catalogue_set_number-1)*self.config.set_size \
+                + (self.config.catalogue_image_number-1)
+        star_shifts[0] -= star_shifts[0][catalogue_index]
+        star_shifts[1] -= star_shifts[1][catalogue_index]
         
         
         ## Write shifts to file

@@ -113,6 +113,8 @@ class Config:
             set_size            = 50,
             n_sets              = 7,
             has_filter_in_header= True,
+            catalogue_set_number= 1,
+            catalogue_image_number=1,
 
             astrometry_timeout  = 1200,
             api_key             = "",
@@ -205,6 +207,8 @@ class Config:
         self.set_size           = set_size
         self.n_sets             = n_sets
         self.has_filter_in_header= has_filter_in_header
+        self.catalogue_set_number = catalogue_set_number
+        self.catalogue_image_number = catalogue_image_number
 
         self.astrometry_timeout = astrometry_timeout
         self.api_key_file       = api_key_file
