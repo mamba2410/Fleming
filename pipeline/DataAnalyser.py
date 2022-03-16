@@ -329,6 +329,9 @@ class DataAnalyser:
 
         
     ## TODO: Move me
+    ## BIG TODO: Ordering is an issue.
+    ## Need to merge between 3 catalogues. Preferably give back in the order
+    ## of variable_ids
     def output_results(self, variable_ids, vd, out_dir=None, show=False):
         """
         Save the table of variable stars.
