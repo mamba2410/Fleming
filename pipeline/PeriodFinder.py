@@ -12,7 +12,7 @@ class PeriodFinder:
 
     def period_search(self, source_id, path,
             period_min = 0.5*3600,  # 0.5 hours
-            period_max = 6.0*3600,  # 6 hours
+            period_max = 8.0*3600,  # 6 hours
             n_samples  = int(2e3),  # 2000 samples
             ):
         """
