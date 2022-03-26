@@ -79,6 +79,7 @@ class Reducer:
             self.bias_frames.append(np.zeros((self.config.image_width, self.config.image_height), dtype="int16"))
 
         self.master_bias = np.median(self.bias_frames)
+        self.bias_median = np.median(self.master_bias)
 
         print("[Reducer] Created master bias")
     
@@ -112,6 +113,9 @@ class Reducer:
 
         self.create_master_bias()
         self.create_master_flat()
+
+        print("[Reducer] Bias median: {:.4f}; Flat median: {:.4f}"
+                .format(self.bias_median, self.flat_median))
         
         #loop througheach file in directory 
         for file, set_number, image_number in Utilities.list_images(self.config, self.config.raw_image_dir, reduced=False):
