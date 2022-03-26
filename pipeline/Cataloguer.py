@@ -178,7 +178,7 @@ class Cataloguer:
         print("[Cataloguer] Getting coordinate system for image '{}'".format(image_file))
 
         ## Find the wcs assosiated with the fits image using astropy and the header
-        self.wcs = self.get_wcs_header(image_file, solve=solve)
+        self.wcs, _head = self.get_wcs_header(image_file, solve=solve)
         
         ## Make two new coloums in source table, set to zero
         sources['RA'] = sources['xcentroid'] * 0
@@ -223,7 +223,7 @@ class Cataloguer:
 
         ## If we don't want to solve, return empty header
         if not solve:
-            return WCS(header=wcs)
+            return WCS(header=wcs), wcs
     
 
         print("[Astrometry] Starting job")
@@ -243,7 +243,7 @@ class Cataloguer:
         print("\n[Astrometry] Finished job")
             
         ## TODO: Gives warning with no image data
-        return WCS(header=wcs)
+        return WCS(header=wcs), wcs
 
 
 
