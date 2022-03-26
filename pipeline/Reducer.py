@@ -75,7 +75,11 @@ class Reducer:
 
         """
 
+        if len(self.bias_frames) == 0:
+            self.bias_frames.append(np.zeros((self.config.image_width, self.config.image_height), dtype="int16"))
+
         self.master_bias = np.median(self.bias_frames)
+
         print("[Reducer] Created master bias")
     
 
