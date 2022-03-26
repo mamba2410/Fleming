@@ -9,3 +9,6 @@ candidates.md
 *_results.txt
 *.reg
 *.log
+*.tar.gz
+*.html
+*.fit
