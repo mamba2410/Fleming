@@ -713,8 +713,10 @@ class FluxFinder:
         if ry >= self.config.image_height:
             ry = self.config.image_height - 1
             
+        thumb_data = image[ly:ry, lx:rx] # note your x,y coords need to be an int
+        thumb_data = np.flip(thumb_data)
             
-        return image[ly:ry, lx:rx] # note your x,y coords need to be an int
+        return thumb_data
 
 
     def remove_cosmics(self, lc, std):
