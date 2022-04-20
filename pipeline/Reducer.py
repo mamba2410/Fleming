@@ -76,6 +76,7 @@ class Reducer:
         """
 
         if len(self.bias_frames) == 0:
+            print("[Reducer] WARN: No bias found")
             self.bias_frames.append(np.zeros((self.config.image_width, self.config.image_height), dtype="int16"))
 
         self.master_bias = np.median(self.bias_frames)
@@ -94,6 +95,7 @@ class Reducer:
 
         ## If we have no flats, give even response
         if len(self.flatfield_frames) == 0:
+            print("[Reducer] WARN: No flats found")
             self.flatfield_frames.append(self.bias_frames[0] * 0 + 1)
 
         self.master_flat = np.median(self.flatfield_frames)

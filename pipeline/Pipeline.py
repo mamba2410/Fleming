@@ -7,8 +7,30 @@ import numpy as np
 
 HOME = os.path.expanduser("~")
 
-## Run for a single field defined by a config object
 def run(config, show_plots=False, show_errors=False, solve_astrometry=True, skip_existing_images=True):
+    """
+    Run the whole pipeline for a single field.
+
+    Parameters
+    ----------
+
+    config: Config
+        Config objecet for field
+
+    show_plots: bool, optional
+        Show plots to the output (only useful in ipython notebooks).
+
+    show_errors: bool, optional
+        Plot error bars on the light curves
+
+    solve_astrometry: bool, optional
+        Flag to skip the astrometry plate solve process. Setting to false will not give RA/DEC
+        coordinates of the stars.
+
+    skip_existing_images: bool, optional
+        Flag to skip reducing images which have already been reduced.
+
+    """
 
     start_time = datetime.now()
     print("[JOB] Started {} at {}".format(config.image_prefix, start_time.strftime("%H:%M:%S")))
@@ -23,9 +45,37 @@ def run(config, show_plots=False, show_errors=False, solve_astrometry=True, skip
     _ = Utilities.finished_job("everything for {}".format(config.image_prefix), start_time)
 
 
-## Run only the variable detection for a single field
-## Assumes we already have shifts, times, light curves, adjusted light curves
 def run_analysis(config, show_plots=False, show_errors=False, assume_already_adjusted=True):
+    """
+    Only run the variable star selection part of the pipeline.
+
+    Parameters
+    ----------
+
+    config: Config
+        Config objecet for field
+
+    show_plots: bool, optional
+        Show plots to the output (only useful in ipython notebooks).
+
+    show_errors: bool, optional
+        Plot error bars on the light curves
+
+    assume_already_adjusted: bool
+        Skip adjusting the raw light curves if we already have done in previous runs.
+
+
+    Returns
+    -------
+
+    results_table: numpy array
+        Table of all of the stars deemed variable (also written to disk).
+
+    end_time: datetime
+        datetime object of when the function finished.
+    
+    """
+
     start_time = datetime.now()
 
     c = Cataloguer(config)
@@ -49,7 +99,45 @@ def run_analysis(config, show_plots=False, show_errors=False, assume_already_adj
     _ = Utilities.finished_job("everything for {}".format(config.image_prefix), start_time)
 
 
+## =============================================================================================
+## The above two functions are all you need if you just want results.
+## The next functions give finer control over which parts of the pipeline to run, but are not
+## necessary
+
 def images_to_light_curves(config, start_time, skip_existing_images=True, solve_astrometry=True):
+    """
+    Takes raw images and creates un-adjusted light curves.
+
+    Produces catalogue, shifts and times of the images.
+
+    Parameters
+    ----------
+
+    config: Config
+        Config object of the field to analyse.
+
+    start_time: datetime 
+        datetime object of the start time of the pipeline (or field).
+
+    skip_existing_images: bool, optional
+        Flag to skip reducing images which have already been reduced.
+
+    solve_astrometry: bool, optional
+        Flag to skip the astrometry plate solve process. Setting to false will not give RA/DEC
+        coordinates of the stars.
+
+
+    Returns
+    -------
+
+    
+    n_sources: int
+        Number of sources in the catalogue
+
+    light_curve_time: datetime
+        datetime object of when the process finished.
+
+    """
 
     ## Reducer
     ## Takes raw images, subtracts bias and divides by flat field
@@ -103,7 +191,7 @@ def images_to_light_curves(config, start_time, skip_existing_images=True, solve_
 
 
 def run_existing(config, n_sources, start_time,
-        show_plots=False, show_errors=False, assume_already_adjusted=False):
+        show_plots=False, show_errors=False, assume_already_adjusted=True):
     """
     Run for a field and assume the light curves are already present.
     Very useful for fast debugging the later stages of the pipeline like the variable finder etc.
@@ -111,10 +199,34 @@ def run_existing(config, n_sources, start_time,
     Parameters
     ----------
 
-    assume_already_adjusted: bool
-        Assume we already have adjusted light curves.
-        Set to False if you're debugging the adjustment process.
+    config: Config
+        Config objecet for field
 
+    n_sources: int
+        Number of stars in the field
+
+    start_time: datetime
+        datetime object of the beginning of the function call
+
+    show_plots: bool, optional
+        Show plots to the output (only useful in ipython notebooks).
+
+    show_errors: bool, optional
+        Plot error bars on the light curves
+
+    assume_already_adjusted: bool
+        Skip adjusting the raw light curves if we already have done in previous runs.
+
+
+    Returns
+    -------
+
+    results_table: numpy array
+        Table of all of the stars deemed variable (also written to disk).
+
+    end_time: datetime
+        datetime object of when the function finished.
+    
     """
 
     ## FluxFinder

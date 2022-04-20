@@ -85,7 +85,7 @@ class Config:
             avg_exclude_threshold   = 0.4,
             variability_threshold   = 1.2,
             variability_max         = 5,
-            amplitude_score_threshold = 1.8,
+            amplitude_score_threshold = 0.85,
             check_radius            = 5,
             cosmic_threshold        = 5,
             min_flux_cutoff         = 1.5,
