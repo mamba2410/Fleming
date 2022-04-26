@@ -131,8 +131,8 @@ def hand_pick():
 		["l199", 900, 0],
     ]
 
-    #n_variables = len(hand_picked)
-    n_variables = len(hand_picked_unsure)
+    n_variables = len(hand_picked)
+    #n_variables = len(hand_picked_unsure)
     print("[HandPicked] Running for {} variables".format(n_variables))
 
     fname = "results_dr2.txt"
@@ -140,8 +140,8 @@ def hand_pick():
     final_results.write(
             "RA [deg]\tDEC [deg]\tField id\tsource id\tperiod [h]\tperiod error [h]\tamplitude [%]\tamplitude error [%]\n")
 
-    #for field_id, source_id, n_periods in hand_picked:
-    for field_id, source_id, n_periods in hand_picked_unsure:
+    for field_id, source_id, n_periods in hand_picked:
+    #for field_id, source_id, n_periods in hand_picked_unsure:
         config = Config(
             image_prefix = field_id,
         )
